@@ -325,6 +325,21 @@ test('visual editor hides the target independently while heating remains control
     document.body.append(editor);
   }, CARD_TYPE);
   const editor = page.locator('flame-connect-card-editor');
+  const scene = page.locator('flame-connect-card .scene');
+  await editor.getByLabel('Background color', { exact: true }).fill('#ffffff');
+  await expect(scene).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await editor
+    .getByRole('combobox', { name: 'Background style', exact: true })
+    .selectOption('none');
+  await expect(scene).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(editor.getByLabel('Background color', { exact: true })).toBeDisabled();
+  await editor
+    .getByRole('combobox', { name: 'Background style', exact: true })
+    .selectOption('color');
+  await expect(scene).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await editor.getByLabel('Background color', { exact: true }).fill('#2155aa');
+  await expect(scene).toHaveCSS('background-color', 'rgb(33, 85, 170)');
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
   await editor.getByRole('button', { name: 'Move down: Target temperature', exact: true }).click();
   expect(
     await page

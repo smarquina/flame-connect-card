@@ -74,5 +74,9 @@
   "show_brightness": "Show flame brightness",
   "control_order": "Control order",
   "move_up": "Move up",
-  "move_down": "Move down"
+  "move_down": "Move down",
+  "image_background": "Fireplace image background",
+  "background_style": "Background style",
+  "background_none": "None (transparent)",
+  "background_color": "Background color"
 }

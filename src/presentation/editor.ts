@@ -8,7 +8,7 @@ import {
   type CardConfig,
   type EntityRole,
 } from '../domain/model';
-import { parseConfig, parseControlOrder } from '../configuration/config';
+import { parseConfig, parseControlOrder, parseImageBackground } from '../configuration/config';
 import { discover, type DiscoveredFireplace } from '../adapters/home-assistant/discovery';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
 import { localize } from '../localization/localize';
@@ -184,6 +184,51 @@ export class FlameConnectCardEditor extends LitElement {
       )}
     </fieldset>`;
   }
+  private backgroundControl() {
+    let background: string;
+    try {
+      background = parseImageBackground(this.config.image_background);
+    } catch {
+      background = '#000000';
+    }
+    const transparent = background === 'transparent';
+    return html`<fieldset class="entities">
+      <legend>${this.t('image_background')}</legend>
+      <label
+        >${this.t('background_style')}<select
+          aria-label=${this.t('background_style')}
+          .value=${transparent ? 'none' : 'color'}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              image_background:
+                (event.currentTarget as HTMLSelectElement).value === 'none'
+                  ? 'transparent'
+                  : '#000000',
+            };
+            this.emit();
+          }}
+        >
+          <option value="none" ?selected=${transparent}>${this.t('background_none')}</option>
+          <option value="color" ?selected=${!transparent}>${this.t('background_color')}</option>
+        </select></label
+      >
+      <label
+        >${this.t('background_color')}<input
+          type="color"
+          aria-label=${this.t('background_color')}
+          .value=${transparent ? '#000000' : background}
+          ?disabled=${transparent}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              image_background: (event.currentTarget as HTMLInputElement).value,
+            };
+            this.emit();
+          }}
+      /></label>
+    </fieldset>`;
+  }
   protected render() {
     const bindings = this.bindings();
     const images = this.config.images as CardConfig['images'] | undefined;
@@ -248,7 +293,7 @@ export class FlameConnectCardEditor extends LitElement {
             >`,
         )}
       </fieldset>
-      ${this.orderControls()}
+      ${this.orderControls()} ${this.backgroundControl()}
       <p class="hint">${this.t('power_hint')}</p>
       <details>
         <summary>${this.t('show_image')}</summary>

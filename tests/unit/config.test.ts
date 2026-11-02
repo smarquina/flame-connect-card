@@ -94,3 +94,26 @@ it('preserves a custom control order without mutating the provided array', () =>
   expect(parsed.control_order).toEqual(control_order);
   expect(parsed.control_order).not.toBe(control_order);
 });
+
+it.each([
+  [undefined, '#000000'],
+  ['none', 'transparent'],
+  ['transparent', 'transparent'],
+  ['black', '#000000'],
+  ['white', '#ffffff'],
+  ['#Ab12Cd', '#ab12cd'],
+])('normalizes the fireplace background %s', (image_background, expected) => {
+  expect(parseConfig({ ...config, image_background }).image_background).toBe(expected);
+});
+it.each([
+  null,
+  0,
+  {},
+  'constructor',
+  '#fff',
+  'url(https://example.com)',
+  'red;display:none',
+  '#12345g',
+])('rejects unsafe or invalid background %#', (image_background) => {
+  expect(() => parseConfig({ ...config, image_background })).toThrow('image_background:');
+});

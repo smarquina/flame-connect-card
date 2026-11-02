@@ -344,7 +344,7 @@ export class FlameConnectCard extends LitElement {
       class="scene ${unknown ? 'unknown' : ''}"
       role="img"
       aria-label=${label}
-      style=${styleMap({ backgroundImage: image, backgroundSize: customImage ? 'contain' : '200% 200%', backgroundPosition: customImage ? 'center' : positions[visual] })}
+      style=${styleMap({ backgroundColor: config.image_background, backgroundImage: image, backgroundSize: customImage ? 'contain' : '200% 200%', backgroundPosition: customImage ? 'center' : positions[visual] })}
     >
       ${unknown ? icon('unavailable') : nothing}
     </div>`;
