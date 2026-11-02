@@ -1,4 +1,10 @@
-import { CARD_TYPE, SCHEMA_VERSION, type CardConfig, type EntityRole } from '../domain/model';
+import {
+  CARD_TYPE,
+  SCHEMA_VERSION,
+  VISIBILITY_OPTIONS,
+  type CardConfig,
+  type EntityRole,
+} from '../domain/model';
 
 const DOMAINS: Record<EntityRole, string> = {
   power: 'switch',
@@ -56,7 +62,7 @@ export function parseConfig(value: unknown): CardConfig {
   const entities = parseEntities(value.entities);
   if (value.name !== undefined && (typeof value.name !== 'string' || !value.name.trim()))
     throw new Error('name: expected a non-empty string');
-  for (const key of ['show_power', 'show_image']) {
+  for (const key of VISIBILITY_OPTIONS) {
     if (value[key] !== undefined && typeof value[key] !== 'boolean')
       throw new Error(`${key}: expected a boolean`);
   }
@@ -67,6 +73,13 @@ export function parseConfig(value: unknown): CardConfig {
     images: parseImages(value.images),
     show_power: value.show_power !== false,
     show_image: value.show_image !== false,
+    show_flame: value.show_flame !== false,
+    show_heating: value.show_heating !== false,
+    show_target: value.show_target !== false,
+    show_ambient: value.show_ambient !== false,
+    show_mode: value.show_mode !== false,
+    show_color: value.show_color !== false,
+    show_brightness: value.show_brightness !== false,
     ...(typeof value.name === 'string' ? { name: value.name } : {}),
   };
 }

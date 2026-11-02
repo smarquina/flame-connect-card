@@ -432,3 +432,46 @@ it('groups icon-only power, flame and heating and changes the power action after
   await element.updateComplete;
   expect(button(element, 'Turn fireplace on')).toBeUndefined();
 });
+
+it.each([
+  ['show_target', '#target'],
+  ['show_ambient', '.reading'],
+  ['show_flame', 'button[aria-label="Flame · On"]'],
+  ['show_heating', 'button[aria-label="Heating · On"]'],
+  ['show_mode', 'select[aria-label="Mode"]'],
+  ['show_color', 'select[aria-label="Flame color"]'],
+  ['show_brightness', 'select[aria-label="Flame brightness"]'],
+] as const)(
+  'hides %s independently and restores it without changing entity state',
+  async (key, selector) => {
+    const hass = fakeHass();
+    hass.callService = vi.fn();
+    const element = await card(hass, { [key]: false });
+    expect(element.shadowRoot!.querySelector(selector)).toBeNull();
+    expect(button(element, 'Turn fireplace off')).toBeDefined();
+    element.setConfig({ ...config, [key]: true });
+    await element.updateComplete;
+    expect(element.shadowRoot!.querySelector(selector)).not.toBeNull();
+    expect(hass.callService).not.toHaveBeenCalled();
+  },
+);
+
+it('exposes translated visibility settings in the visual editor and preserves them when reopened', async () => {
+  const hass = fakeHass();
+  hass.language = 'es';
+  const element = await editor(hass, { ...config, show_target: false });
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  const target = [...element.shadowRoot!.querySelectorAll('label')]
+    .find((label) => label.textContent!.includes('Mostrar temperatura objetivo'))!
+    .querySelector('input')!;
+  expect(target.checked).toBe(false);
+  target.checked = true;
+  target.dispatchEvent(new Event('change'));
+  const saved = (changes.mock.calls[0]![0] as CustomEvent).detail.config;
+  expect(saved).toMatchObject({ show_target: true, entities: config.entities });
+  element.setConfig(saved);
+  await element.updateComplete;
+  expect(target.checked).toBe(true);
+  expect(hass.states['climate.fire_heating']!.attributes.temperature).toBe(22);
+});

@@ -2,15 +2,38 @@
 
 Use the visual card editor or the dashboard's YAML card editor. These options configure a dashboard card; they do not belong in `configuration.yaml`.
 
-| Option       | Type    | Default         | Meaning                                                      |
-| ------------ | ------- | --------------- | ------------------------------------------------------------ |
-| `type`       | string  | Required        | `custom:flame-connect-card`                                  |
-| `version`    | integer | `1`             | Configuration schema version, independent of package version |
-| `name`       | string  | Entity name     | Card title                                                   |
-| `entities`   | object  | Required        | Entity-role mapping below                                    |
-| `show_power` | boolean | `true`          | Display the configured whole-device power button             |
-| `show_image` | boolean | `true`          | Display the fireplace illustration                           |
-| `images`     | object  | Bundled artwork | Optional per-state images                                    |
+| Option            | Type    | Default         | Meaning                                                      |
+| ----------------- | ------- | --------------- | ------------------------------------------------------------ |
+| `type`            | string  | Required        | `custom:flame-connect-card`                                  |
+| `version`         | integer | `1`             | Configuration schema version, independent of package version |
+| `name`            | string  | Entity name     | Card title                                                   |
+| `entities`        | object  | Required        | Entity-role mapping below                                    |
+| `show_power`      | boolean | `true`          | Display the configured whole-device power button             |
+| `show_image`      | boolean | `true`          | Display the fireplace illustration                           |
+| `show_flame`      | boolean | `true`          | Display the decorative flame button                          |
+| `show_heating`    | boolean | `true`          | Display the heating/ventilation button                       |
+| `show_target`     | boolean | `true`          | Display the target temperature input and adjustment buttons  |
+| `show_ambient`    | boolean | `true`          | Display the external room-temperature reading                |
+| `show_mode`       | boolean | `true`          | Display the heating preset selector                          |
+| `show_color`      | boolean | `true`          | Display the flame color selector                             |
+| `show_brightness` | boolean | `true`          | Display the flame brightness selector                        |
+| `images`          | object  | Bundled artwork | Optional per-state images                                    |
+
+## Visible elements
+
+In the dashboard, edit the card and use **Visible elements** to choose which controls and readings appear. The editor follows your Home Assistant language; Spanish users see **Elementos visibles**. All elements are visible by default when their required entities are mapped. Missing bindings still hide the corresponding elements.
+
+For example, uncheck **Show target temperature** to keep heating on/off and its mode selector while removing the setpoint input and its plus/minus buttons. The equivalent card configuration is:
+
+```yaml
+type: custom:flame-connect-card
+entities:
+  flame: light.living_room_flame
+  climate: climate.living_room_heating
+show_target: false
+```
+
+Visibility options do not remove entity bindings, alter the fireplace state or send commands. They persist per card and can be restored independently. Empty control rows collapse automatically. Hiding a control is a display preference, not an authorization restriction: the entity remains accessible elsewhere in Home Assistant. To use the same fireplace on different dashboards with different visible controls, configure each card separately.
 
 ## Entity roles
 

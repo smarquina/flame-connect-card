@@ -56,3 +56,23 @@ it.each([
   '/\\attacker/x',
   '/local/a b.png',
 ])('rejects unsafe image reference %s', (value) => expect(() => validateImage(value)).toThrow());
+
+it.each([
+  'show_flame',
+  'show_heating',
+  'show_target',
+  'show_ambient',
+  'show_mode',
+  'show_color',
+  'show_brightness',
+] as const)(
+  'defaults %s to visible and accepts explicit hiding without dropping entity bindings',
+  (key) => {
+    expect(parseConfig({ type: CARD_TYPE, entities: config.entities })[key]).toBe(true);
+    expect(parseConfig({ ...config, [key]: false })).toMatchObject({
+      [key]: false,
+      entities: config.entities,
+    });
+    expect(() => parseConfig({ ...config, [key]: 'false' })).toThrow(`${key}: expected a boolean`);
+  },
+);

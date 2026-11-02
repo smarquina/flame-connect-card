@@ -1,5 +1,11 @@
 import { LitElement, css, html, nothing } from 'lit';
-import { CARD_TYPE, SCHEMA_VERSION, type CardConfig, type EntityRole } from '../domain/model';
+import {
+  CARD_TYPE,
+  SCHEMA_VERSION,
+  VISIBILITY_OPTIONS,
+  type CardConfig,
+  type EntityRole,
+} from '../domain/model';
 import { parseConfig } from '../configuration/config';
 import { discover, type DiscoveredFireplace } from '../adapters/home-assistant/discovery';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
@@ -172,22 +178,25 @@ export class FlameConnectCardEditor extends LitElement {
       </div>
       <p class="hint">${this.t('entity_hint')}</p>
       <p class="hint">${this.t('sensor_hint')}</p>
-      ${(['show_power', 'show_image'] as const).map(
-        (key) =>
-          html`<label class="check"
-            ><input
-              type="checkbox"
-              .checked=${key === 'show_image' ? this.config[key] !== false : this.config[key] === true}
-              @change=${(event: Event) => {
-                this.config = {
-                  ...this.config,
-                  [key]: (event.currentTarget as HTMLInputElement).checked,
-                };
-                this.emit();
-              }}
-            />${this.t(key)}</label
-          >`,
-      )}
+      <fieldset class="entities">
+        <legend>${this.t('visibility')}</legend>
+        ${VISIBILITY_OPTIONS.map(
+          (key) =>
+            html`<label class="check"
+              ><input
+                type="checkbox"
+                .checked=${this.config[key] !== false}
+                @change=${(event: Event) => {
+                  this.config = {
+                    ...this.config,
+                    [key]: (event.currentTarget as HTMLInputElement).checked,
+                  };
+                  this.emit();
+                }}
+              />${this.t(key)}</label
+            >`,
+        )}
+      </fieldset>
       <p class="hint">${this.t('power_hint')}</p>
       <details>
         <summary>${this.t('show_image')}</summary>

@@ -63,5 +63,13 @@
   "editor_description": "Controla una chimenea Flame Connect mediante sus entidades de Home Assistant.",
   "power_on": "Encender chimenea",
   "power_off": "Apagar chimenea",
-  "controls": "Controles de la chimenea"
+  "controls": "Controles de la chimenea",
+  "visibility": "Elementos visibles",
+  "show_flame": "Mostrar control de llama",
+  "show_heating": "Mostrar control de calefacción",
+  "show_target": "Mostrar temperatura objetivo",
+  "show_ambient": "Mostrar temperatura ambiente",
+  "show_mode": "Mostrar modo de calefacción",
+  "show_color": "Mostrar color de llama",
+  "show_brightness": "Mostrar brillo de llama"
 }

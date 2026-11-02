@@ -8,13 +8,23 @@ export const VISUAL_STATES = ['off', 'flame', 'heat', 'both', 'unknown'] as cons
 export type VisualState = (typeof VISUAL_STATES)[number];
 export type EntityRole = 'power' | 'flame' | 'climate' | 'color' | 'brightness' | 'ambient';
 export type Bindings = Partial<Record<EntityRole, string>>;
-export interface CardConfig {
+export const VISIBILITY_OPTIONS = [
+  'show_power',
+  'show_flame',
+  'show_heating',
+  'show_image',
+  'show_target',
+  'show_ambient',
+  'show_mode',
+  'show_color',
+  'show_brightness',
+] as const;
+export type VisibilityOption = (typeof VISIBILITY_OPTIONS)[number];
+export interface CardConfig extends Record<VisibilityOption, boolean> {
   type: typeof CARD_TYPE;
   version: number;
   name?: string;
   entities: Bindings;
-  show_power: boolean;
-  show_image: boolean;
   images: Partial<Record<Exclude<VisualState, 'unknown'>, string>>;
 }
 export interface Choice {
