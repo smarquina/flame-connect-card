@@ -1,5 +1,7 @@
 import {
   CARD_TYPE,
+  DETAIL_CONTROLS,
+  type DetailControl,
   SCHEMA_VERSION,
   VISIBILITY_OPTIONS,
   type CardConfig,
@@ -55,6 +57,20 @@ function parseImages(value: unknown): CardConfig['images'] {
   return images;
 }
 
+export function parseControlOrder(value: unknown): DetailControl[] {
+  if (value === undefined) return [...DETAIL_CONTROLS];
+  if (
+    !Array.isArray(value) ||
+    value.length !== DETAIL_CONTROLS.length ||
+    new Set(value).size !== DETAIL_CONTROLS.length ||
+    !value.every((entry) => DETAIL_CONTROLS.includes(entry))
+  )
+    throw new Error(
+      'control_order: include ambient, target, mode, color and brightness exactly once',
+    );
+  return [...value];
+}
+
 export function parseConfig(value: unknown): CardConfig {
   if (!RECORD(value) || value.type !== CARD_TYPE) throw new Error(`type: expected ${CARD_TYPE}`);
   if (value.version !== undefined && value.version !== SCHEMA_VERSION)
@@ -70,6 +86,7 @@ export function parseConfig(value: unknown): CardConfig {
     type: CARD_TYPE,
     version: SCHEMA_VERSION,
     entities,
+    control_order: parseControlOrder(value.control_order),
     images: parseImages(value.images),
     show_power: value.show_power !== false,
     show_image: value.show_image !== false,

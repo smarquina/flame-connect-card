@@ -9,6 +9,7 @@ import {
   type Command,
   type FireplaceState,
   type EntityRole,
+  type DetailControl,
   type VisibilityOption,
 } from '../domain/model';
 import { visualState, visibleModes } from '../domain/state';
@@ -63,8 +64,7 @@ export class FlameConnectCard extends LitElement {
         padding: 18px 20px;
       }
       .toggles:empty,
-      .temperatures:empty,
-      .options:empty {
+      .settings:empty {
         display: none;
       }
       .toggles {
@@ -117,10 +117,14 @@ export class FlameConnectCard extends LitElement {
         white-space: nowrap;
         border: 0;
       }
-      .temperatures {
+      .settings {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 14px;
+        align-items: center;
+      }
+      .settings > div {
+        min-width: 0;
       }
       .reading-label {
         display: inline-flex;
@@ -145,11 +149,6 @@ export class FlameConnectCard extends LitElement {
         padding: 8px 13px;
         font-size: 1.2rem;
       }
-      .options {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
-      }
       @media (max-width: 360px) {
         header {
           padding: 14px;
@@ -157,7 +156,7 @@ export class FlameConnectCard extends LitElement {
         .body {
           padding: 14px;
         }
-        .temperatures {
+        .settings {
           grid-template-columns: 1fr;
         }
       }
@@ -377,6 +376,24 @@ export class FlameConnectCard extends LitElement {
   private isVisible(config: CardConfig, option: VisibilityOption, role: EntityRole): boolean {
     return config[option] && Boolean(config.entities[role]);
   }
+  private detailControl(state: FireplaceState, config: CardConfig, kind: DetailControl) {
+    const roles = {
+      ambient: 'ambient',
+      target: 'climate',
+      mode: 'climate',
+      color: 'color',
+      brightness: 'brightness',
+    } as const;
+    if (!this.isVisible(config, `show_${kind}`, roles[kind])) return nothing;
+    const renderers = {
+      ambient: () => this.ambientControl(state),
+      target: () => this.targetControl(state),
+      mode: () => this.selectControl(state, 'mode'),
+      color: () => this.selectControl(state, 'color'),
+      brightness: () => this.selectControl(state, 'brightness'),
+    };
+    return html`<div data-control=${kind}>${renderers[kind]()}</div>`;
+  }
   protected render() {
     const state = this.snapshot();
     const config = this.config;
@@ -393,11 +410,8 @@ export class FlameConnectCard extends LitElement {
         <div class="toggles" role="group" aria-label=${this.t('controls')}>
           ${this.powerControl(state, config)}${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame') : nothing}${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating') : nothing}
         </div>
-        <div class="temperatures">
-          ${this.isVisible(config, 'show_ambient', 'ambient') ? this.ambientControl(state) : nothing}${this.isVisible(config, 'show_target', 'climate') ? this.targetControl(state) : nothing}
-        </div>
-        <div class="options">
-          ${this.isVisible(config, 'show_mode', 'climate') ? this.selectControl(state, 'mode') : nothing}${this.isVisible(config, 'show_color', 'color') ? this.selectControl(state, 'color') : nothing}${this.isVisible(config, 'show_brightness', 'brightness') ? this.selectControl(state, 'brightness') : nothing}
+        <div class="settings">
+          ${config.control_order.map((kind) => this.detailControl(state, config, kind))}
         </div>
         ${this.controller?.busy ? html`<div class="feedback" role="status" title=${this.t('pending')}>${icon('pending')}<span class="sr-only">${this.t('pending')}</span></div>` : nothing}
         ${this.error ? html`<div class="feedback error" role="alert" title=${this.t(this.error)}>${icon('unavailable')}<span class="sr-only">${this.t(this.error)}</span></div>` : nothing}

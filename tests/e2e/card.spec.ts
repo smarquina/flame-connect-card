@@ -92,7 +92,9 @@ test('keeps room and target temperatures independent and validates bounds', asyn
 test('reads preset/color/brightness options and sends supported discrete selections', async ({
   page,
 }) => {
-  await page.getByRole('combobox', { name: 'Mode', exact: true }).selectOption('fan_only');
+  await page
+    .getByRole('combobox', { name: 'Heating / fan mode', exact: true })
+    .selectOption('fan_only');
   await expect(page.getByRole('button', { name: 'Ventilation · On' })).toBeVisible();
   await expect(page.getByRole('img')).toHaveCSS('background-position', '100% 0%');
   await page.getByRole('combobox', { name: 'Flame color' }).selectOption('blue');
@@ -100,7 +102,7 @@ test('reads preset/color/brightness options and sends supported discrete selecti
   await expect(page.getByRole('combobox', { name: 'Flame color' })).toHaveValue('blue');
   await expect(page.getByRole('combobox', { name: 'Flame brightness' })).toHaveValue('flicker_low');
   await expect(
-    page.getByRole('combobox', { name: 'Mode', exact: true }).locator('option'),
+    page.getByRole('combobox', { name: 'Heating / fan mode', exact: true }).locator('option'),
   ).toHaveCount(3);
 });
 
@@ -321,6 +323,12 @@ test('visual editor hides the target independently while heating remains control
     document.body.append(editor);
   }, CARD_TYPE);
   const editor = page.locator('flame-connect-card-editor');
+  await editor.getByRole('button', { name: 'Move down: Target temperature', exact: true }).click();
+  expect(
+    await page
+      .locator('flame-connect-card [data-control]')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-control'))),
+  ).toEqual(['ambient', 'mode', 'target']);
   await editor.getByRole('checkbox', { name: 'Show target temperature', exact: true }).uncheck();
   await expect(
     page.getByRole('spinbutton', { name: 'Target temperature', exact: true }),
@@ -329,9 +337,9 @@ test('visual editor hides the target independently while heating remains control
   await page.getByRole('button', { name: 'Heating · On', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Heating · Off', exact: true })).toBeVisible();
   await editor.getByRole('checkbox', { name: 'Show room temperature', exact: true }).uncheck();
-  await expect(page.locator('flame-connect-card .temperatures')).toBeHidden();
-  await editor.getByRole('checkbox', { name: 'Show heating mode', exact: true }).uncheck();
-  await expect(page.locator('flame-connect-card .options')).toBeHidden();
+  await expect(page.locator('flame-connect-card [data-control=ambient]')).toHaveCount(0);
+  await editor.getByRole('checkbox', { name: 'Show heating / fan mode', exact: true }).uncheck();
+  await expect(page.locator('flame-connect-card .settings')).toBeHidden();
   await editor.getByRole('checkbox', { name: 'Show flame control', exact: true }).uncheck();
   await editor.getByRole('checkbox', { name: 'Show heating control', exact: true }).uncheck();
   await expect(page.locator('flame-connect-card .toggles')).toBeHidden();

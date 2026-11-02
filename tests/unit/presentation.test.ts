@@ -129,7 +129,7 @@ it('selects presets and discrete settings without optimistic display', async () 
   hass.callService = vi.fn().mockResolvedValue(undefined);
   const element = await card(hass);
   for (const [label, value, entity] of [
-    ['Mode', 'eco', 'climate.fire_heating'],
+    ['Heating / fan mode', 'eco', 'climate.fire_heating'],
     ['Flame color', 'blue', 'select.fire_color'],
     ['Flame brightness', 'low', 'select.fire_brightness'],
   ] as const) {
@@ -137,7 +137,7 @@ it('selects presets and discrete settings without optimistic display', async () 
     select.value = value;
     select.dispatchEvent(new Event('change'));
     expect(select.value).not.toBe(value);
-    if (label === 'Mode') hass.states[entity]!.attributes.preset_mode = value;
+    if (label === 'Heating / fan mode') hass.states[entity]!.attributes.preset_mode = value;
     else hass.states[entity]!.state = value;
     await settle(element, hass);
     expect(select.value).toBe(value);
@@ -349,7 +349,7 @@ it('does not trust change events from disabled temperature and option controls',
   change(input(element), '22');
   await vi.waitFor(() => expect(text(element)).toContain('This control is unavailable'));
   expect(input(element).value).toBe('');
-  change(select(element, 'Mode'), 'eco');
+  change(select(element, 'Heating / fan mode'), 'eco');
   await element.updateComplete;
   change(select(element, 'Flame color'), 'blue');
   await element.updateComplete;
@@ -438,7 +438,7 @@ it.each([
   ['show_ambient', '.reading'],
   ['show_flame', 'button[aria-label="Flame · On"]'],
   ['show_heating', 'button[aria-label="Heating · On"]'],
-  ['show_mode', 'select[aria-label="Mode"]'],
+  ['show_mode', 'select[aria-label="Heating / fan mode"]'],
   ['show_color', 'select[aria-label="Flame color"]'],
   ['show_brightness', 'select[aria-label="Flame brightness"]'],
 ] as const)(
@@ -474,4 +474,46 @@ it('exposes translated visibility settings in the visual editor and preserves th
   await element.updateComplete;
   expect(target.checked).toBe(true);
   expect(hass.states['climate.fire_heating']!.attributes.temperature).toBe(22);
+});
+
+it('renders visible settings in configured order and retains hidden positions', async () => {
+  const control_order = ['brightness', 'color', 'mode', 'target', 'ambient'] as const;
+  const element = await card(fakeHass(), { control_order: [...control_order], show_target: false });
+  const rendered = () =>
+    [...element.shadowRoot!.querySelectorAll('[data-control]')].map((entry) =>
+      entry.getAttribute('data-control'),
+    );
+  expect(rendered()).toEqual(['brightness', 'color', 'mode', 'ambient']);
+  element.setConfig({ ...config, control_order: [...control_order] });
+  await element.updateComplete;
+  expect(rendered()).toEqual(control_order);
+});
+
+it('moves controls up and down, preserves hidden settings, and rejects boundary moves', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  const element = await editor(hass, { ...config, show_target: false });
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  const move = (label: string) =>
+    element.shadowRoot!.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
+  move('Move up: Room temperature').dispatchEvent(new Event('click'));
+  move('Move down: Flame brightness').dispatchEvent(new Event('click'));
+  expect(changes).not.toHaveBeenCalled();
+  move('Move up: Target temperature').click();
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config).toMatchObject({
+    control_order: ['target', 'ambient', 'mode', 'color', 'brightness'],
+    show_target: false,
+    entities: config.entities,
+  });
+  move('Move down: Target temperature').click();
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.control_order).toEqual(
+    config.control_order,
+  );
+  expect(hass.callService).not.toHaveBeenCalled();
+  element.setConfig({ ...config, control_order: ['invalid'] });
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelectorAll('[data-order-control]')).toHaveLength(5);
 });

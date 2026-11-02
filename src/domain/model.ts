@@ -19,12 +19,15 @@ export const VISIBILITY_OPTIONS = [
   'show_color',
   'show_brightness',
 ] as const;
+export const DETAIL_CONTROLS = ['ambient', 'target', 'mode', 'color', 'brightness'] as const;
+export type DetailControl = (typeof DETAIL_CONTROLS)[number];
 export type VisibilityOption = (typeof VISIBILITY_OPTIONS)[number];
 export interface CardConfig extends Record<VisibilityOption, boolean> {
   type: typeof CARD_TYPE;
   version: number;
   name?: string;
   entities: Bindings;
+  control_order: DetailControl[];
   images: Partial<Record<Exclude<VisualState, 'unknown'>, string>>;
 }
 export interface Choice {
