@@ -2,23 +2,24 @@
 
 Use the visual card editor or the dashboard's YAML card editor. These options configure a dashboard card; they do not belong in `configuration.yaml`.
 
-| Option            | Type    | Default                                      | Meaning                                                      |
-| ----------------- | ------- | -------------------------------------------- | ------------------------------------------------------------ |
-| `type`            | string  | Required                                     | `custom:flame-connect-card`                                  |
-| `version`         | integer | `1`                                          | Configuration schema version, independent of package version |
-| `name`            | string  | Entity name                                  | Card title                                                   |
-| `entities`        | object  | Required                                     | Entity-role mapping below                                    |
-| `show_power`      | boolean | `true`                                       | Display the configured whole-device power button             |
-| `show_image`      | boolean | `true`                                       | Display the fireplace illustration                           |
-| `show_flame`      | boolean | `true`                                       | Display the decorative flame button                          |
-| `show_heating`    | boolean | `true`                                       | Display the heating/ventilation button                       |
-| `show_target`     | boolean | `true`                                       | Display the target-temperature slider                        |
-| `show_ambient`    | boolean | `true`                                       | Display the external room-temperature reading                |
-| `show_mode`       | boolean | `true`                                       | Display the heating preset selector                          |
-| `show_color`      | boolean | `true`                                       | Display the flame color selector                             |
-| `show_brightness` | boolean | `true`                                       | Display the flame brightness selector                        |
-| `control_order`   | array   | `[ambient, target, mode, color, brightness]` | Reading and selector order; include each key exactly once    |
-| `images`          | object  | Bundled artwork                              | Optional per-state images                                    |
+| Option             | Type    | Default                                      | Meaning                                                                                      |
+| ------------------ | ------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `type`             | string  | Required                                     | `custom:flame-connect-card`                                                                  |
+| `version`          | integer | `1`                                          | Configuration schema version, independent of package version                                 |
+| `name`             | string  | Entity name                                  | Card title                                                                                   |
+| `entities`         | object  | Required                                     | Entity-role mapping below                                                                    |
+| `show_power`       | boolean | `true`                                       | Display the configured whole-device power button                                             |
+| `show_image`       | boolean | `true`                                       | Display the fireplace illustration                                                           |
+| `show_flame`       | boolean | `true`                                       | Display the decorative flame button                                                          |
+| `show_heating`     | boolean | `true`                                       | Display the heating/ventilation button                                                       |
+| `show_target`      | boolean | `true`                                       | Display the target-temperature slider                                                        |
+| `show_ambient`     | boolean | `true`                                       | Display the external room-temperature reading                                                |
+| `show_mode`        | boolean | `true`                                       | Display the heating preset selector                                                          |
+| `show_color`       | boolean | `true`                                       | Display the flame color selector                                                             |
+| `show_brightness`  | boolean | `true`                                       | Display the flame brightness selector                                                        |
+| `control_order`    | array   | `[ambient, target, mode, color, brightness]` | Reading and selector order; include each key exactly once                                    |
+| `image_background` | string  | `"#000000"`                                  | Fireplace image background: `none`, `transparent`, `black`, `white` or a six-digit hex color |
+| `images`           | object  | Bundled artwork                              | Optional per-state images                                                                    |
 
 ## Visible elements
 
@@ -64,6 +65,18 @@ The target uses the climate entity's exposed unit, limits and step; the card doe
 Room readings are converted to the target's unit when available, otherwise the HA unit preference or sensor unit is used. The original sensor state is never changed. Unknown, unavailable, empty, non-finite and incompatible readings display as unavailable. An unchanged temperature is not considered stale solely because its value has not changed.
 
 Normal, Eco and Fan only are offered only when included in `preset_modes`. If another preset is active, the card displays it without silently replacing it. Brightness options can include `high`, `low`, `flicker_high` and `flicker_low`; palette combinations depend on the model.
+
+## Image background
+
+Use **Fireplace image background** in the visual editor. Choose **None (transparent)** to show the card background through the artwork's transparent areas, or **Background color** and use the color picker. Black is the default. In Spanish the section is **Fondo de la imagen de la chimenea**. Switching from transparent to color starts with black.
+
+```yaml
+image_background: none
+# Or use a color, for example:
+# image_background: "#ffffff"
+```
+
+The setting applies only to the illustration area, not the whole card or the fireplace's physical flame color. It persists per card and sends no device commands. The bundled artwork supports transparency; opaque backgrounds embedded in custom images remain opaque. Hiding the image retains the chosen background for when it is shown again.
 
 ## Images
 

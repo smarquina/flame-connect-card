@@ -28,6 +28,7 @@ export interface CardConfig extends Record<VisibilityOption, boolean> {
   name?: string;
   entities: Bindings;
   control_order: DetailControl[];
+  image_background: string;
   images: Partial<Record<Exclude<VisualState, 'unknown'>, string>>;
 }
 export interface Choice {

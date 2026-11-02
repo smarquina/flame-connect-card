@@ -74,5 +74,9 @@
   "show_brightness": "Mostrar brillo de llama",
   "control_order": "Orden de los controles",
   "move_up": "Subir",
-  "move_down": "Bajar"
+  "move_down": "Bajar",
+  "image_background": "Fondo de la imagen de la chimenea",
+  "background_style": "Tipo de fondo",
+  "background_none": "Ninguno (transparente)",
+  "background_color": "Color de fondo"
 }

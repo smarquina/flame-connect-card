@@ -71,6 +71,21 @@ export function parseControlOrder(value: unknown): DetailControl[] {
   return [...value];
 }
 
+export function parseImageBackground(value: unknown): string {
+  if (value === undefined) return '#000000';
+  const presets: Record<string, string> = {
+    none: 'transparent',
+    transparent: 'transparent',
+    black: '#000000',
+    white: '#ffffff',
+  };
+  if (typeof value === 'string') {
+    if (Object.hasOwn(presets, value)) return presets[value]!;
+    if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase();
+  }
+  throw new Error('image_background: use none, transparent, black, white or a six-digit hex color');
+}
+
 export function parseConfig(value: unknown): CardConfig {
   if (!RECORD(value) || value.type !== CARD_TYPE) throw new Error(`type: expected ${CARD_TYPE}`);
   if (value.version !== undefined && value.version !== SCHEMA_VERSION)
@@ -88,6 +103,7 @@ export function parseConfig(value: unknown): CardConfig {
     entities,
     control_order: parseControlOrder(value.control_order),
     images: parseImages(value.images),
+    image_background: parseImageBackground(value.image_background),
     show_power: value.show_power !== false,
     show_image: value.show_image !== false,
     show_flame: value.show_flame !== false,

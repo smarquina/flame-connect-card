@@ -19,6 +19,7 @@ This community project is not affiliated with, approved by, or supported by Glen
 - The fireplace's discrete flame color and brightness options.
 - An optional external room-temperature sensor, independent from the heating setpoint.
 - Whole-device power is shown by default when mapped; set `show_power: false` to hide it.
+- Configurable illustration background: transparent or any color through the visual editor.
 - Four static fireplace illustrations for effects off, flame only, heating only, and heating with flame.
 - Visual configuration with independent visibility settings for power, flame, heating, image, target/room temperatures, mode, color and brightness.
 - English/Spanish localization, keyboard controls and responsive layout.

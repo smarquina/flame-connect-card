@@ -542,3 +542,43 @@ it('disables the slider for missing or fixed limits and handles unavailable temp
   expect(hass.callService).not.toHaveBeenCalled();
   expect(input(element).style.getPropertyValue('--fill')).toBe('0%');
 });
+
+it('persists image background choices through the editor without changing device state', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  const element = await editor(hass);
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  const picker = () => element.shadowRoot!.querySelector<HTMLInputElement>('input[type="color"]')!;
+  const background = select(element, 'Background style');
+  expect(background.value).toBe('color');
+  expect(picker().value).toBe('#000000');
+  change(picker(), '#ffffff');
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.image_background).toBe('#ffffff');
+  change(background, 'none');
+  await element.updateComplete;
+  expect(picker().disabled).toBe(true);
+  const saved = (changes.mock.lastCall![0] as CustomEvent).detail.config;
+  element.setConfig(saved);
+  await element.updateComplete;
+  expect(background.value).toBe('none');
+  change(background, 'color');
+  await element.updateComplete;
+  expect(picker().disabled).toBe(false);
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.image_background).toBe('#000000');
+  element.setConfig({ ...config, image_background: 'invalid' });
+  await element.updateComplete;
+  expect(picker().value).toBe('#000000');
+  expect(hass.callService).not.toHaveBeenCalled();
+});
+
+it.each(['transparent', '#000000', '#ffffff', '#123456'])(
+  'applies %s only to the scene background',
+  async (image_background) => {
+    const element = await card(fakeHass(), { image_background });
+    const scene = element.shadowRoot!.querySelector<HTMLElement>('.scene')!;
+    expect(scene.style.backgroundColor).toBe(image_background);
+    expect(scene.style.backgroundImage).toContain('data:image/png');
+  },
+);
