@@ -1,0 +1,48 @@
+import type { Bindings, EntityRole } from '../../domain/model';
+import type { HomeAssistant, RegistryEntry } from './types';
+
+const SUFFIXES: Partial<Record<EntityRole, string>> = {
+  power: '_power',
+  flame: '_flame',
+  climate: '_heating',
+  color: '_color',
+  brightness: '_brightness',
+};
+const DOMAINS: Partial<Record<EntityRole, string>> = {
+  power: 'switch.',
+  flame: 'light.',
+  climate: 'climate.',
+  color: 'select.',
+  brightness: 'select.',
+};
+export interface DiscoveredFireplace {
+  id: string;
+  name: string;
+  entities: Bindings;
+}
+
+export async function discover(hass: HomeAssistant): Promise<DiscoveredFireplace[]> {
+  const entries = await hass.callWS<RegistryEntry[]>({ type: 'config/entity_registry/list' });
+  const devices = new Map<string, DiscoveredFireplace>();
+  for (const entry of entries) {
+    if (entry.platform !== 'flame_connect' || !entry.device_id || entry.disabled_by) continue;
+    const role = (Object.keys(SUFFIXES) as EntityRole[]).find(
+      (key) =>
+        entry.unique_id.endsWith(SUFFIXES[key] ?? '!') &&
+        entry.entity_id.startsWith(DOMAINS[key] ?? '!'),
+    );
+    if (!role) continue;
+    const device = devices.get(entry.device_id) ?? {
+      id: entry.device_id,
+      name: entry.name ?? entry.original_name ?? entry.device_id,
+      entities: {},
+    };
+    device.entities[role] = entry.entity_id;
+    if (role === 'climate' || role === 'flame') {
+      const name = hass.states[entry.entity_id]?.attributes.friendly_name;
+      if (typeof name === 'string') device.name = name;
+    }
+    devices.set(entry.device_id, device);
+  }
+  return [...devices.values()].filter((device) => device.entities.flame || device.entities.climate);
+}
