@@ -76,3 +76,21 @@ it.each([
     expect(() => parseConfig({ ...config, [key]: 'false' })).toThrow(`${key}: expected a boolean`);
   },
 );
+
+it.each([
+  null,
+  {},
+  'ambient',
+  [],
+  ['ambient', 'target', 'mode', 'color', 'color'],
+  ['ambient', 'target', 'mode', 'color', 'unsupported'],
+  ['ambient', 'target', 'mode', 'color', 1],
+])('rejects invalid control order %#', (control_order) => {
+  expect(() => parseConfig({ ...config, control_order })).toThrow('control_order:');
+});
+it('preserves a custom control order without mutating the provided array', () => {
+  const control_order = ['brightness', 'color', 'mode', 'target', 'ambient'];
+  const parsed = parseConfig({ ...config, control_order });
+  expect(parsed.control_order).toEqual(control_order);
+  expect(parsed.control_order).not.toBe(control_order);
+});

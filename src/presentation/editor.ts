@@ -1,12 +1,14 @@
 import { LitElement, css, html, nothing } from 'lit';
 import {
   CARD_TYPE,
+  DETAIL_CONTROLS,
+  type DetailControl,
   SCHEMA_VERSION,
   VISIBILITY_OPTIONS,
   type CardConfig,
   type EntityRole,
 } from '../domain/model';
-import { parseConfig } from '../configuration/config';
+import { parseConfig, parseControlOrder } from '../configuration/config';
 import { discover, type DiscoveredFireplace } from '../adapters/home-assistant/discovery';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
 import { localize } from '../localization/localize';
@@ -32,6 +34,12 @@ export class FlameConnectCardEditor extends LitElement {
       .entities {
         display: grid;
         gap: 12px;
+      }
+      .order-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 8px;
       }
       .check {
         display: flex;
@@ -133,6 +141,49 @@ export class FlameConnectCardEditor extends LitElement {
       })
       .sort((left, right) => left.localeCompare(right, 'en'));
   }
+  private controlOrder(): DetailControl[] {
+    try {
+      return parseControlOrder(this.config.control_order);
+    } catch {
+      return [...DETAIL_CONTROLS];
+    }
+  }
+  private moveControl(index: number, direction: -1 | 1): void {
+    const order = this.controlOrder();
+    const next = index + direction;
+    if (next < 0 || next >= order.length) return;
+    [order[index], order[next]] = [order[next]!, order[index]!];
+    this.config = { ...this.config, control_order: order };
+    this.emit();
+  }
+  private orderControls() {
+    const order = this.controlOrder();
+    return html`<fieldset class="entities">
+      <legend>${this.t('control_order')}</legend>
+      ${order.map(
+        (kind, index) =>
+          html`<div class="order-row" data-order-control=${kind}>
+            <span>${this.t(kind)}</span>
+            <button
+              aria-label=${this.t('move_up') + ': ' + this.t(kind)}
+              title=${this.t('move_up') + ': ' + this.t(kind)}
+              ?disabled=${index === 0}
+              @click=${() => this.moveControl(index, -1)}
+            >
+              ↑
+            </button>
+            <button
+              aria-label=${this.t('move_down') + ': ' + this.t(kind)}
+              title=${this.t('move_down') + ': ' + this.t(kind)}
+              ?disabled=${index === order.length - 1}
+              @click=${() => this.moveControl(index, 1)}
+            >
+              ↓
+            </button>
+          </div>`,
+      )}
+    </fieldset>`;
+  }
   protected render() {
     const bindings = this.bindings();
     const images = this.config.images as CardConfig['images'] | undefined;
@@ -197,6 +248,7 @@ export class FlameConnectCardEditor extends LitElement {
             >`,
         )}
       </fieldset>
+      ${this.orderControls()}
       <p class="hint">${this.t('power_hint')}</p>
       <details>
         <summary>${this.t('show_image')}</summary>

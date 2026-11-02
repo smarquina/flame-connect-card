@@ -43,7 +43,7 @@ The card needs no separate Flame Connect login, JWT, backend service or cloud AP
 
 Add `https://github.com/smarquina/flame-connect-card` as a custom **Dashboard** repository (`plugin` internally). Download an available version and refresh the frontend. Enable pre-release versions when installing a beta. This repository is not automatically part of the default catalog.
 
-Once available, add **Flame Connect Card** through the dashboard card picker. Select a detected fireplace or assign its entities manually. Choose an external temperature sensor if desired. Under **Visible elements**, hide any controls or readings you do not want; for example, uncheck **Show target temperature** to retain heating controls without displaying the setpoint.
+Once available, add **Flame Connect Card** through the dashboard card picker. Select a detected fireplace or assign its entities manually. Choose an external temperature sensor if desired. Under **Visible elements**, hide any controls or readings you do not want; for example, uncheck **Show target temperature** to retain heating controls without displaying the setpoint. Use **Control order** to reorder room temperature, target temperature, heating/fan mode, color and brightness with the up/down buttons.
 
 If the resource is not registered automatically, add `/hacsfiles/flame-connect-card/flame-connect-card.js` as a **JavaScript module** in the dashboard resource settings. Resource settings may require Advanced Mode in the user profile. See [installation and updates](docs/installation.md).
 

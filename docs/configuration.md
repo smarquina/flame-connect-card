@@ -2,22 +2,23 @@
 
 Use the visual card editor or the dashboard's YAML card editor. These options configure a dashboard card; they do not belong in `configuration.yaml`.
 
-| Option            | Type    | Default         | Meaning                                                      |
-| ----------------- | ------- | --------------- | ------------------------------------------------------------ |
-| `type`            | string  | Required        | `custom:flame-connect-card`                                  |
-| `version`         | integer | `1`             | Configuration schema version, independent of package version |
-| `name`            | string  | Entity name     | Card title                                                   |
-| `entities`        | object  | Required        | Entity-role mapping below                                    |
-| `show_power`      | boolean | `true`          | Display the configured whole-device power button             |
-| `show_image`      | boolean | `true`          | Display the fireplace illustration                           |
-| `show_flame`      | boolean | `true`          | Display the decorative flame button                          |
-| `show_heating`    | boolean | `true`          | Display the heating/ventilation button                       |
-| `show_target`     | boolean | `true`          | Display the target temperature input and adjustment buttons  |
-| `show_ambient`    | boolean | `true`          | Display the external room-temperature reading                |
-| `show_mode`       | boolean | `true`          | Display the heating preset selector                          |
-| `show_color`      | boolean | `true`          | Display the flame color selector                             |
-| `show_brightness` | boolean | `true`          | Display the flame brightness selector                        |
-| `images`          | object  | Bundled artwork | Optional per-state images                                    |
+| Option            | Type    | Default                                      | Meaning                                                      |
+| ----------------- | ------- | -------------------------------------------- | ------------------------------------------------------------ |
+| `type`            | string  | Required                                     | `custom:flame-connect-card`                                  |
+| `version`         | integer | `1`                                          | Configuration schema version, independent of package version |
+| `name`            | string  | Entity name                                  | Card title                                                   |
+| `entities`        | object  | Required                                     | Entity-role mapping below                                    |
+| `show_power`      | boolean | `true`                                       | Display the configured whole-device power button             |
+| `show_image`      | boolean | `true`                                       | Display the fireplace illustration                           |
+| `show_flame`      | boolean | `true`                                       | Display the decorative flame button                          |
+| `show_heating`    | boolean | `true`                                       | Display the heating/ventilation button                       |
+| `show_target`     | boolean | `true`                                       | Display the target temperature input and adjustment buttons  |
+| `show_ambient`    | boolean | `true`                                       | Display the external room-temperature reading                |
+| `show_mode`       | boolean | `true`                                       | Display the heating preset selector                          |
+| `show_color`      | boolean | `true`                                       | Display the flame color selector                             |
+| `show_brightness` | boolean | `true`                                       | Display the flame brightness selector                        |
+| `control_order`   | array   | `[ambient, target, mode, color, brightness]` | Reading and selector order; include each key exactly once    |
+| `images`          | object  | Bundled artwork                              | Optional per-state images                                    |
 
 ## Visible elements
 
@@ -31,9 +32,15 @@ entities:
   flame: light.living_room_flame
   climate: climate.living_room_heating
 show_target: false
+control_order:
+  - mode
+  - ambient
+  - target
+  - color
+  - brightness
 ```
 
-Visibility options do not remove entity bindings, alter the fireplace state or send commands. They persist per card and can be restored independently. Empty control rows collapse automatically. Hiding a control is a display preference, not an authorization restriction: the entity remains accessible elsewhere in Home Assistant. To use the same fireplace on different dashboards with different visible controls, configure each card separately.
+Visibility options do not remove entity bindings, alter the fireplace state or send commands. They persist per card and can be restored independently. Empty control rows collapse automatically. Under **Control order** (**Orden de los controles**), use the up/down buttons to reorder room temperature, target temperature, heating/fan mode, color and brightness. Items follow this order from left to right and top to bottom, stacking in the same order on narrow screens. Hidden items retain their position when shown again. Power, flame and heating buttons stay in their separate action group. Hiding a control is a display preference, not an authorization restriction: the entity remains accessible elsewhere in Home Assistant. To use the same fireplace on different dashboards with different visible controls, configure each card separately.
 
 ## Entity roles
 

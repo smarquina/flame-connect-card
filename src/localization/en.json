@@ -7,7 +7,7 @@
   "power_hint": "Whole-device power can enable both heating and flame.",
   "ambient": "Room temperature",
   "target": "Target temperature",
-  "mode": "Mode",
+  "mode": "Heating / fan mode",
   "color": "Flame color",
   "brightness": "Flame brightness",
   "normal": "Normal",
@@ -69,7 +69,10 @@
   "show_heating": "Show heating control",
   "show_target": "Show target temperature",
   "show_ambient": "Show room temperature",
-  "show_mode": "Show heating mode",
+  "show_mode": "Show heating / fan mode",
   "show_color": "Show flame color",
-  "show_brightness": "Show flame brightness"
+  "show_brightness": "Show flame brightness",
+  "control_order": "Control order",
+  "move_up": "Move up",
+  "move_down": "Move down"
 }

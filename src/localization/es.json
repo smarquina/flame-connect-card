@@ -7,7 +7,7 @@
   "power_hint": "El encendido general puede activar la calefacción y la llama.",
   "ambient": "Temperatura ambiente",
   "target": "Temperatura objetivo",
-  "mode": "Modo",
+  "mode": "Modo de calefacción / ventilador",
   "color": "Color de llama",
   "brightness": "Brillo de llama",
   "normal": "Normal",
@@ -69,7 +69,10 @@
   "show_heating": "Mostrar control de calefacción",
   "show_target": "Mostrar temperatura objetivo",
   "show_ambient": "Mostrar temperatura ambiente",
-  "show_mode": "Mostrar modo de calefacción",
+  "show_mode": "Mostrar modo de calefacción / ventilador",
   "show_color": "Mostrar color de llama",
-  "show_brightness": "Mostrar brillo de llama"
+  "show_brightness": "Mostrar brillo de llama",
+  "control_order": "Orden de los controles",
+  "move_up": "Subir",
+  "move_down": "Bajar"
 }
