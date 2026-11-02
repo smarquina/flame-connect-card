@@ -8,6 +8,8 @@ import {
   type CardConfig,
   type Command,
   type FireplaceState,
+  type EntityRole,
+  type VisibilityOption,
 } from '../domain/model';
 import { visualState, visibleModes } from '../domain/state';
 import { mapState } from '../adapters/home-assistant/state-mapper';
@@ -59,6 +61,11 @@ export class FlameConnectCard extends LitElement {
         display: grid;
         gap: 18px;
         padding: 18px 20px;
+      }
+      .toggles:empty,
+      .temperatures:empty,
+      .options:empty {
+        display: none;
       }
       .toggles {
         display: flex;
@@ -367,6 +374,9 @@ export class FlameConnectCard extends LitElement {
       ${icon(state.power ? 'power_off' : 'power_on')}
     </button>`;
   }
+  private isVisible(config: CardConfig, option: VisibilityOption, role: EntityRole): boolean {
+    return config[option] && Boolean(config.entities[role]);
+  }
   protected render() {
     const state = this.snapshot();
     const config = this.config;
@@ -381,18 +391,13 @@ export class FlameConnectCard extends LitElement {
       ${this.image(state, config)}
       <div class="body">
         <div class="toggles" role="group" aria-label=${this.t('controls')}>
-          ${this.powerControl(state, config)}
-          ${config.entities.flame ? this.toggle(state, 'flame') : nothing}
-          ${config.entities.climate ? this.toggle(state, 'heating') : nothing}
+          ${this.powerControl(state, config)}${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame') : nothing}${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating') : nothing}
         </div>
         <div class="temperatures">
-          ${config.entities.ambient ? this.ambientControl(state) : nothing}
-          ${config.entities.climate ? this.targetControl(state) : nothing}
+          ${this.isVisible(config, 'show_ambient', 'ambient') ? this.ambientControl(state) : nothing}${this.isVisible(config, 'show_target', 'climate') ? this.targetControl(state) : nothing}
         </div>
         <div class="options">
-          ${config.entities.climate ? this.selectControl(state, 'mode') : nothing}
-          ${config.entities.color ? this.selectControl(state, 'color') : nothing}
-          ${config.entities.brightness ? this.selectControl(state, 'brightness') : nothing}
+          ${this.isVisible(config, 'show_mode', 'climate') ? this.selectControl(state, 'mode') : nothing}${this.isVisible(config, 'show_color', 'color') ? this.selectControl(state, 'color') : nothing}${this.isVisible(config, 'show_brightness', 'brightness') ? this.selectControl(state, 'brightness') : nothing}
         </div>
         ${this.controller?.busy ? html`<div class="feedback" role="status" title=${this.t('pending')}>${icon('pending')}<span class="sr-only">${this.t('pending')}</span></div>` : nothing}
         ${this.error ? html`<div class="feedback error" role="alert" title=${this.t(this.error)}>${icon('unavailable')}<span class="sr-only">${this.t(this.error)}</span></div>` : nothing}

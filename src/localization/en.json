@@ -63,5 +63,13 @@
   "editor_description": "Control a Flame Connect fireplace using its Home Assistant entities.",
   "power_on": "Turn fireplace on",
   "power_off": "Turn fireplace off",
-  "controls": "Fireplace controls"
+  "controls": "Fireplace controls",
+  "visibility": "Visible elements",
+  "show_flame": "Show flame control",
+  "show_heating": "Show heating control",
+  "show_target": "Show target temperature",
+  "show_ambient": "Show room temperature",
+  "show_mode": "Show heating mode",
+  "show_color": "Show flame color",
+  "show_brightness": "Show flame brightness"
 }

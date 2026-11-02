@@ -20,7 +20,8 @@ This community project is not affiliated with, approved by, or supported by Glen
 - An optional external room-temperature sensor, independent from the heating setpoint.
 - Whole-device power is shown by default when mapped; set `show_power: false` to hide it.
 - Four static fireplace illustrations for effects off, flame only, heating only, and heating with flame.
-- Visual configuration, English/Spanish localization, keyboard controls and responsive layout.
+- Visual configuration with independent visibility settings for power, flame, heating, image, target/room temperatures, mode, color and brightness.
+- English/Spanish localization, keyboard controls and responsive layout.
 
 The illustrations use the supplied four-state artwork. They do not animate or reproduce every flame color. Heat symbols indicate **heating enabled**, not measured heat output. Fan only uses a ventilation icon and does not display heat symbols. An unavailable state is never illustrated as a confirmed shutdown.
 
@@ -42,7 +43,7 @@ The card needs no separate Flame Connect login, JWT, backend service or cloud AP
 
 Add `https://github.com/smarquina/flame-connect-card` as a custom **Dashboard** repository (`plugin` internally). Download an available version and refresh the frontend. Enable pre-release versions when installing a beta. This repository is not automatically part of the default catalog.
 
-Once available, add **Flame Connect Card** through the dashboard card picker. Select a detected fireplace or assign its entities manually. Choose an external temperature sensor if desired.
+Once available, add **Flame Connect Card** through the dashboard card picker. Select a detected fireplace or assign its entities manually. Choose an external temperature sensor if desired. Under **Visible elements**, hide any controls or readings you do not want; for example, uncheck **Show target temperature** to retain heating controls without displaying the setpoint.
 
 If the resource is not registered automatically, add `/hacsfiles/flame-connect-card/flame-connect-card.js` as a **JavaScript module** in the dashboard resource settings. Resource settings may require Advanced Mode in the user profile. See [installation and updates](docs/installation.md).
 
