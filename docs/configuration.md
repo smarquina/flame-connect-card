@@ -8,7 +8,7 @@ Use the visual card editor or the dashboard's YAML card editor. These options co
 | `version`    | integer | `1`             | Configuration schema version, independent of package version |
 | `name`       | string  | Entity name     | Card title                                                   |
 | `entities`   | object  | Required        | Entity-role mapping below                                    |
-| `show_power` | boolean | `false`         | Display the configured whole-device power button             |
+| `show_power` | boolean | `true`          | Display the configured whole-device power button             |
 | `show_image` | boolean | `true`          | Display the fireplace illustration                           |
 | `images`     | object  | Bundled artwork | Optional per-state images                                    |
 

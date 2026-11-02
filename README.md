@@ -13,18 +13,20 @@ This community project is not affiliated with, approved by, or supported by Glen
 
 ## Controls
 
-- Independent decorative flame and heating/ventilation controls.
+- Grouped icon buttons for whole-device power, decorative flame and heating/ventilation. The power button offers start when off and power-off when on; it requires a mapped power entity.
 - Target temperature with the climate entity's limits, step and unit.
 - Normal, Eco and Fan only presets when supported.
 - The fireplace's discrete flame color and brightness options.
 - An optional external room-temperature sensor, independent from the heating setpoint.
-- An optional whole-device power control.
+- Whole-device power is shown by default when mapped; set `show_power: false` to hide it.
 - Four static fireplace illustrations for effects off, flame only, heating only, and heating with flame.
 - Visual configuration, English/Spanish localization, keyboard controls and responsive layout.
 
-The illustrations use the supplied four-state artwork. They do not animate or reproduce every flame color. Heat symbols indicate **heating enabled**, not measured heat output. Fan only has a separate status and does not display heat symbols. An unavailable state is never illustrated as a confirmed shutdown.
+The illustrations use the supplied four-state artwork. They do not animate or reproduce every flame color. Heat symbols indicate **heating enabled**, not measured heat output. Fan only uses a ventilation icon and does not display heat symbols. An unavailable state is never illustrated as a confirmed shutdown.
 
 ![Flame Connect Card preview using simulated entity states](docs/preview.png)
+
+The card uses icons instead of action labels and explanatory paragraphs. Tooltips identify controls on hover; accessible names support screen readers and keyboard navigation. Temperature values and selected options remain visible. Pending commands and errors use status icons with accessible messages.
 
 ## Requirements
 

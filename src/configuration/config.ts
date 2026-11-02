@@ -65,7 +65,7 @@ export function parseConfig(value: unknown): CardConfig {
     version: SCHEMA_VERSION,
     entities,
     images: parseImages(value.images),
-    show_power: value.show_power === true,
+    show_power: value.show_power !== false,
     show_image: value.show_image !== false,
     ...(typeof value.name === 'string' ? { name: value.name } : {}),
   };
