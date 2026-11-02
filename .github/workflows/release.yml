@@ -1,0 +1,67 @@
+name: Release card
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Verify tag matches package
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node --input-type=module -e 'import fs from "node:fs"; const pkg=JSON.parse(fs.readFileSync("package.json","utf8")); if(process.env.RELEASE_TAG !== `v${pkg.version}`) process.exit(1);'
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: git diff --exit-code -- dist/
+      - run: npm audit --audit-level=moderate
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:e2e -- --workers=2
+      - uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa # main
+        with:
+          category: plugin
+          comment: false
+      - name: Require successful main-branch SonarQube analysis for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          result=$(gh run list --workflow sonar.yml --commit "$GITHUB_SHA" --branch main --event push --json conclusion --jq '[.[] | select(.conclusion == "success")] | length > 0')
+          test "$result" = true || { echo 'This exact commit needs a successful SonarQube main-branch analysis before release.'; exit 1; }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-module
+          path: dist/flame-connect-card.js
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: release-module
+      - name: Publish verified module
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'The release already exists; no existing release will be overwritten.'
+            exit 1
+          fi
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            gh release create "$RELEASE_TAG" flame-connect-card.js --verify-tag --generate-notes --prerelease --latest=false
+          else
+            gh release create "$RELEASE_TAG" flame-connect-card.js --verify-tag --generate-notes
+          fi

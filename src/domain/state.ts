@@ -1,0 +1,92 @@
+import {
+  ControlError,
+  SUPPORTED_PRESETS,
+  TEMPERATURE_STEP_TOLERANCE,
+  TEMPERATURE_CONFIRMATION_TOLERANCE,
+  type Command,
+  type FireplaceState,
+  type VisualState,
+} from './model';
+
+export function visualState(state: FireplaceState): VisualState {
+  if (state.power === false) return 'off';
+  if (state.flame === null || state.heating === null) return 'unknown';
+  const heat = state.heating && state.mode !== 'fan_only';
+  if (heat) return state.flame ? 'both' : 'heat';
+  return state.flame ? 'flame' : 'off';
+}
+
+export function visibleModes(state: FireplaceState): string[] {
+  return state.modes.filter((mode) => SUPPORTED_PRESETS.some((preset) => preset === mode));
+}
+
+function validateTemperature(state: FireplaceState, value: number): void {
+  if (
+    !state.climateAvailable ||
+    !state.target ||
+    state.minimum === null ||
+    state.maximum === null ||
+    state.step === null
+  )
+    throw new ControlError('unavailable');
+  const steps = (value - state.minimum) / state.step;
+  if (
+    !Number.isFinite(value) ||
+    value < state.minimum ||
+    value > state.maximum ||
+    Math.abs(steps - Math.round(steps)) > TEMPERATURE_STEP_TOLERANCE
+  )
+    throw new ControlError('invalid_value');
+}
+
+function validateEffect(state: FireplaceState, kind: 'power' | 'flame', value: boolean): void {
+  if (state[kind] === null) throw new ControlError('unavailable');
+  if (kind === 'flame' && value && state.power === false) throw new ControlError('standby');
+}
+
+export function validateCommand(state: FireplaceState, command: Command): void {
+  switch (command.kind) {
+    case 'power':
+    case 'flame':
+      validateEffect(state, command.kind, command.value);
+      break;
+    case 'heating':
+      if (!state.climateAvailable || state.heating === null) throw new ControlError('unavailable');
+      break;
+    case 'temperature': {
+      validateTemperature(state, command.value);
+      break;
+    }
+    case 'mode':
+      if (!state.climateAvailable) throw new ControlError('unavailable');
+      if (!visibleModes(state).includes(command.value)) throw new ControlError('invalid_value');
+      break;
+    case 'color':
+    case 'brightness':
+      if (!state[command.kind].available) throw new ControlError('unavailable');
+      if (!state[command.kind].options.includes(command.value))
+        throw new ControlError('invalid_value');
+  }
+}
+
+export function isConfirmed(state: FireplaceState, command: Command): boolean {
+  switch (command.kind) {
+    case 'temperature':
+      return (
+        state.target !== null &&
+        Math.abs(state.target.value - command.value) < TEMPERATURE_CONFIRMATION_TOLERANCE
+      );
+    case 'mode':
+      return state.mode === command.value && state.climateAvailable;
+    case 'color':
+    case 'brightness':
+      return state[command.kind].available && state[command.kind].value === command.value;
+    default:
+      return state[command.kind] === command.value;
+  }
+}
+
+export function convertTemperature(value: number, from: '°C' | '°F', to: '°C' | '°F'): number {
+  if (from === to) return value;
+  return to === '°C' ? ((value - 32) * 5) / 9 : (value * 9) / 5 + 32;
+}
