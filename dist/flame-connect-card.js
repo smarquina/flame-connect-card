@@ -573,8 +573,9 @@ var Ce = {
 	ambient: "sensor"
 }, q = (e) => typeof e == "object" && !!e && !Array.isArray(e);
 function Ae(e) {
-	if (typeof e != "string" || !/^\/(?!\/)[^\s\\]*$/.test(e)) throw Error("images: use a same-origin absolute path, e.g. /local/fireplace.png");
-	if (new URL(e, "https://home-assistant.invalid").origin !== "https://home-assistant.invalid") throw Error("images: external URLs are not supported");
+	if (typeof e != "string") throw Error("images: use a same-origin absolute path, e.g. /local/fireplace.png");
+	if (new URL(e, "https://home-assistant.invalid").origin !== "https://home-assistant.invalid") throw Error("images: external URLs are not supported; use a same-origin absolute path");
+	if (!/^\/(?!\/)[^\s\\]*$/.test(e)) throw Error("images: use a same-origin absolute path, e.g. /local/fireplace.png");
 	return e;
 }
 function je(e) {
@@ -898,27 +899,29 @@ var Ze = class {
 		this.getHass = e, this.entities = t;
 	}
 	async send(e) {
-		let t = e.kind === "heating" || e.kind === "mode" || e.kind === "temperature" ? "climate" : e.kind, n = this.entities[t];
-		if (!n) throw new G("unavailable");
-		let r, i, a = {};
+		let t = this.getHass();
+		if (!t) throw new G("unavailable");
+		let n = e.kind === "heating" || e.kind === "mode" || e.kind === "temperature" ? "climate" : e.kind, r = this.entities[n];
+		if (!r) throw new G("unavailable");
+		let i, a, o = {};
 		switch (e.kind) {
 			case "power":
 			case "flame":
-				r = e.kind === "power" ? "switch" : "light", i = e.value ? "turn_on" : "turn_off";
+				i = e.kind === "power" ? "switch" : "light", a = e.value ? "turn_on" : "turn_off";
 				break;
 			case "heating":
-				r = "climate", i = "set_hvac_mode", a = { hvac_mode: e.value ? "heat" : "off" };
+				i = "climate", a = "set_hvac_mode", o = { hvac_mode: e.value ? "heat" : "off" };
 				break;
 			case "temperature":
-				r = "climate", i = "set_temperature", a = { temperature: e.value };
+				i = "climate", a = "set_temperature", o = { temperature: e.value };
 				break;
 			case "mode":
-				r = "climate", i = "set_preset_mode", a = { preset_mode: e.value };
+				i = "climate", a = "set_preset_mode", o = { preset_mode: e.value };
 				break;
 			case "color":
-			case "brightness": r = "select", i = "select_option", a = { option: e.value };
+			case "brightness": i = "select", a = "select_option", o = { option: e.value };
 		}
-		await this.getHass().callService(r, i, a, { entity_id: n });
+		await t.callService(i, a, o, { entity_id: r });
 	}
 };
 // src/composition.ts
@@ -1006,7 +1009,7 @@ async function rt(e) {
 	let t = await e.callWS({ type: "config/entity_registry/list" }), n = /* @__PURE__ */ new Map();
 	for (let r of t) {
 		if (r.platform !== "flame_connect" || !r.device_id || r.disabled_by) continue;
-		let t = Object.keys(tt).find((e) => r.unique_id.endsWith(tt[e] ?? "!") && r.entity_id.startsWith(nt[e] ?? "!"));
+		let t = Object.keys(tt).find((e) => r.unique_id.endsWith(tt[e]) && r.entity_id.startsWith(nt[e]));
 		if (!t) continue;
 		let i = n.get(r.device_id) ?? {
 			id: r.device_id,
@@ -1312,10 +1315,7 @@ var ot = class extends H {
 	}
 	setConfig(e) {
 		let t = Ne(e);
-		this.generation++, this.controller?.dispose(), this.config = t, this.error = "", this.controller = $e(() => {
-			if (!this.currentHass) throw new G("unavailable");
-			return this.currentHass;
-		}, t.entities, () => this.requestUpdate()), this.requestUpdate();
+		this.generation++, this.controller?.dispose(), this.config = t, this.error = "", this.controller = $e(() => this.currentHass, t.entities, () => this.requestUpdate()), this.requestUpdate();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.generation++, this.controller?.dispose();
@@ -1346,7 +1346,7 @@ var ot = class extends H {
 		return this.preview || this.controller?.busy === !0;
 	}
 	async run(e) {
-		if (this.disabled || !this.config || !this.currentHass || !this.controller) return;
+		if (!this.isConnected || this.disabled || !this.config || !this.currentHass || !this.controller) return;
 		let t = this.generation;
 		this.error = "";
 		try {
@@ -1356,12 +1356,12 @@ var ot = class extends H {
 		}
 		this.requestUpdate();
 	}
-	choose(e, t) {
-		let n = t.currentTarget, r = n.value;
+	choose(e, t, n) {
+		let r = t.currentTarget, i = r.value;
 		this.run({
 			kind: e,
-			value: r
-		}), n.value = e === "mode" ? this.snapshot()?.mode ?? "" : this.snapshot()?.[e].value ?? "";
+			value: i
+		}), r.value = n ?? "";
 	}
 	snapshot() {
 		return this.config && this.currentHass ? Q(this.config, this.currentHass) : void 0;
@@ -1379,7 +1379,7 @@ var ot = class extends H {
         aria-label=${this.t(t)}
         .value=${r ?? ""}
         ?disabled=${this.disabled || !i}
-        @change=${(e) => this.choose(t, e)}
+        @change=${(e) => this.choose(t, e, r)}
       >
         ${!r || !n.includes(r) ? M`<option value=${r ?? ""}>${a}</option>` : P}
         ${n.map((e) => M`<option value=${e} ?selected=${r === e}>${this.t(e)}</option>`)}

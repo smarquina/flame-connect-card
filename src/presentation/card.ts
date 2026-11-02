@@ -141,10 +141,7 @@ export class FlameConnectCard extends LitElement {
     this.config = config;
     this.error = '';
     this.controller = composeController(
-      () => {
-        if (!this.currentHass) throw new ControlError('unavailable');
-        return this.currentHass;
-      },
+      () => this.currentHass,
       config.entities,
       () => this.requestUpdate(),
     );
@@ -174,7 +171,8 @@ export class FlameConnectCard extends LitElement {
     return this.preview || this.controller?.busy === true;
   }
   private async run(command: Command): Promise<void> {
-    if (this.disabled || !this.config || !this.currentHass || !this.controller) return;
+    if (!this.isConnected || this.disabled || !this.config || !this.currentHass || !this.controller)
+      return;
     const generation = this.generation;
     this.error = '';
     try {
@@ -185,13 +183,16 @@ export class FlameConnectCard extends LitElement {
     }
     this.requestUpdate();
   }
-  private choose(kind: 'mode' | 'color' | 'brightness', event: Event): void {
+  private choose(
+    kind: 'mode' | 'color' | 'brightness',
+    event: Event,
+    confirmed: string | null,
+  ): void {
     const input = event.currentTarget as HTMLSelectElement;
     const value = input.value;
     void this.run({ kind, value });
     // The displayed selection follows confirmed state, not native optimistic selection.
-    input.value =
-      kind === 'mode' ? (this.snapshot()?.mode ?? '') : (this.snapshot()?.[kind].value ?? '');
+    input.value = confirmed ?? '';
   }
   private snapshot(): FireplaceState | undefined {
     return this.config && this.currentHass ? mapState(this.config, this.currentHass) : undefined;
@@ -209,7 +210,7 @@ export class FlameConnectCard extends LitElement {
         aria-label=${this.t(kind)}
         .value=${current ?? ''}
         ?disabled=${this.disabled || !enabled}
-        @change=${(event: Event) => this.choose(kind, event)}
+        @change=${(event: Event) => this.choose(kind, event, current)}
       >
         ${!current || !options.includes(current) ? html`<option value=${current ?? ''}>${placeholder}</option>` : nothing}
         ${options.map((option) => html`<option value=${option} ?selected=${current === option}>${this.t(option)}</option>`)}

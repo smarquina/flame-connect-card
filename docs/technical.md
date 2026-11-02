@@ -12,7 +12,7 @@
 - `presentation`: Lit card, visual editor, styles and localization.
 - `composition`: constructs the application controller and HA action adapter.
 
-The architecture check rejects outward imports from the core. Unit coverage thresholds apply to the configured source paths; browser tests separately verify the complete rendered interface and visual editor. SonarQube consumes the LCOV report.
+The architecture check rejects outward imports from the core. Coverage checks require 100% of lines, statements, branches and functions across the TypeScript source and validation scripts, without coverage-ignore annotations. Browser tests separately verify the complete rendered interface and visual editor. SonarQube consumes the LCOV report.
 
 ## Actions and state
 

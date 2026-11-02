@@ -9,6 +9,9 @@ assert(
   source.includes('data:image/png;base64,'),
   'The four supplied fireplace states must be bundled.',
 );
-assert(!/from\s*["'](?:lit|\.\/)/.test(source), 'No external or missing module dependencies.');
+assert(
+  !/\b(?:from\s*|import\s*(?:\(\s*)?)["'](?:lit|\.\/)/.test(source),
+  'No external or missing module dependencies.',
+);
 assert(statSync(`dist/${hacs.filename}`).size < 2_500_000, 'Distribution must stay below 2.5 MB.');
 console.log(`Verified self-contained ${hacs.filename} (${pkg.version}).`);

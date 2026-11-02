@@ -4,10 +4,12 @@ import type { HomeAssistant } from './types';
 
 export class HassActionGateway implements ActionGateway {
   constructor(
-    private readonly getHass: () => HomeAssistant,
+    private readonly getHass: () => HomeAssistant | undefined,
     private readonly entities: Bindings,
   ) {}
   async send(command: Command): Promise<void> {
+    const hass = this.getHass();
+    if (!hass) throw new ControlError('unavailable');
     const role: EntityRole =
       command.kind === 'heating' || command.kind === 'mode' || command.kind === 'temperature'
         ? 'climate'
@@ -44,6 +46,6 @@ export class HassActionGateway implements ActionGateway {
         service = 'select_option';
         data = { option: command.value };
     }
-    await this.getHass().callService(domain, service, data, { entity_id: entity });
+    await hass.callService(domain, service, data, { entity_id: entity });
   }
 }
