@@ -13,6 +13,7 @@ const paths = {
     'M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 1-4 2 2 0 0 1 1-4h3c5 0 3-10-6-10 M7 9h.01 M10 6h.01 M15 6h.01 M18 9h.01',
   brightness:
     'M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1 1 M18 18l1 1 M5 19l1-1 M18 6l1-1 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+  speed: 'M4 18a9 9 0 1 1 16 0 M12 14l5-7 M6 11l1 1 M12 5v2 M18 11l-1 1',
   pending: 'M12 8v4l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
   unavailable: 'M12 3L2 21h20z M12 9v5 M12 17h.01',
 } as const;

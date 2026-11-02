@@ -21,6 +21,7 @@ const ROLES: Record<EntityRole, string> = {
   ambient: 'sensor.',
   color: 'select.',
   brightness: 'select.',
+  speed: 'number.',
 };
 export class FlameConnectCardEditor extends LitElement {
   static readonly styles = [

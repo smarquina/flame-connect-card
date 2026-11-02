@@ -120,6 +120,7 @@ test('shows English and Spanish according to Home Assistant language', async ({ 
     page.getByRole('slider', { name: 'Temperatura objetivo', exact: true }),
   ).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Brillo de llama' })).toBeVisible();
+  await expect(page.getByRole('slider', { name: 'Velocidad de llama', exact: true })).toBeVisible();
   await expect(page.getByText('19,5 °C', { exact: true })).toBeVisible();
   await page.evaluate(() => {
     window.demo.hass.language = 'en';
@@ -314,6 +315,7 @@ test('visual editor hides the target independently while heating remains control
         climate: 'climate.fire_heating',
         flame: 'light.fire_flame',
         ambient: 'sensor.room_temperature',
+        speed: 'number.fire_speed',
       },
     });
     editor.hass = window.demo.hass;
@@ -345,7 +347,7 @@ test('visual editor hides the target independently while heating remains control
     await page
       .locator('flame-connect-card [data-control]')
       .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-control'))),
-  ).toEqual(['ambient', 'mode', 'target']);
+  ).toEqual(['ambient', 'mode', 'target', 'speed']);
   await editor.getByRole('checkbox', { name: 'Show target temperature', exact: true }).uncheck();
   await expect(page.getByRole('slider', { name: 'Target temperature', exact: true })).toHaveCount(
     0,
@@ -356,6 +358,7 @@ test('visual editor hides the target independently while heating remains control
   await editor.getByRole('checkbox', { name: 'Show room temperature', exact: true }).uncheck();
   await expect(page.locator('flame-connect-card [data-control=ambient]')).toHaveCount(0);
   await editor.getByRole('checkbox', { name: 'Show heating / fan mode', exact: true }).uncheck();
+  await editor.getByRole('checkbox', { name: 'Show flame speed', exact: true }).uncheck();
   await expect(page.locator('flame-connect-card .settings')).toBeHidden();
   await editor.getByRole('checkbox', { name: 'Show flame control', exact: true }).uncheck();
   await editor.getByRole('checkbox', { name: 'Show heating control', exact: true }).uncheck();
@@ -400,4 +403,61 @@ test('temperature slider commits once per drag and displays confirmed readback',
   await expect(slider).toBeEnabled();
   await expect(slider).toHaveValue(requested);
   await expect(page.getByText('19.5 °C', { exact: true })).toBeVisible();
+});
+
+test('flame speed slider commits once per drag, tracks readback and never changes other effects', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    window.demo.defer = true;
+  });
+  const slider = page.getByRole('slider', { name: 'Flame speed', exact: true });
+  await expect(slider).toHaveValue('3');
+  await expect(slider).toHaveAttribute('min', '1');
+  await expect(slider).toHaveAttribute('max', '5');
+  await expect(slider).toHaveAttribute('step', '1');
+  await slider.scrollIntoViewIfNeeded();
+  const box = (await slider.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2, { steps: 8 });
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
+  const requested = await slider.inputValue();
+  expect(requested).not.toBe('3');
+  await expect(page.locator('flame-connect-card .speed-value')).toHaveText('3');
+  await page.mouse.up();
+  await expect(slider).toBeDisabled();
+  await expect(slider).toHaveValue('3');
+  expect(await page.evaluate(() => window.demo.calls)).toEqual([
+    {
+      domain: 'number',
+      service: 'set_value',
+      data: { value: Number(requested) },
+      target: { entity_id: 'number.fire_speed' },
+    },
+  ]);
+  await page.evaluate((value) => {
+    window.demo.hass.states['number.fire_speed']!.state = value;
+    window.demo.defer = false;
+    window.demo.update();
+  }, requested);
+  await expect(slider).toBeEnabled();
+  await expect(slider).toHaveValue(requested);
+  await slider.press('End');
+  await expect(slider).toHaveValue('5');
+  await slider.press('Home');
+  await expect(slider).toHaveValue('1');
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(3);
+  await expect(page.getByRole('button', { name: 'Flame · On', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Heating · On', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Flame brightness' })).toHaveValue('high');
+  await expect(page.getByRole('slider', { name: 'Target temperature', exact: true })).toHaveValue(
+    '22',
+  );
+  await page.evaluate(() => {
+    window.demo.hass.states['number.fire_speed']!.state = 'unavailable';
+    window.demo.update();
+  });
+  await expect(slider).toBeDisabled();
+  await expect(page.locator('flame-connect-card .speed-value')).toHaveText('—');
 });

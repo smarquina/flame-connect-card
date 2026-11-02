@@ -21,6 +21,7 @@ The architecture check rejects outward imports from the core. Coverage checks re
 | Whole-device on/off        | `switch.turn_on` / `switch.turn_off` | None                      |
 | Flame on/off               | `light.turn_on` / `light.turn_off`   | None                      |
 | Heating/ventilation on/off | `climate.set_hvac_mode`              | `hvac_mode: heat` / `off` |
+| Flame speed                | `number.set_value`                   | `value`                   |
 | Target                     | `climate.set_temperature`            | `temperature`             |
 | Preset                     | `climate.set_preset_mode`            | `preset_mode`             |
 | Color or brightness        | `select.select_option`               | `option`                  |

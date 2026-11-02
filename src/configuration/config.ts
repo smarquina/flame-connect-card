@@ -1,6 +1,7 @@
 import {
   CARD_TYPE,
   DETAIL_CONTROLS,
+  LEGACY_DETAIL_CONTROLS,
   type DetailControl,
   SCHEMA_VERSION,
   VISIBILITY_OPTIONS,
@@ -14,6 +15,7 @@ const DOMAINS: Record<EntityRole, string> = {
   climate: 'climate',
   color: 'select',
   brightness: 'select',
+  speed: 'number',
   ambient: 'sensor',
 };
 const RECORD = (value: unknown): value is Record<string, unknown> =>
@@ -59,16 +61,18 @@ function parseImages(value: unknown): CardConfig['images'] {
 
 export function parseControlOrder(value: unknown): DetailControl[] {
   if (value === undefined) return [...DETAIL_CONTROLS];
+  if (!Array.isArray(value)) throw new Error('control_order: expected an array');
+  const legacy = value.length === LEGACY_DETAIL_CONTROLS.length && !value.includes('speed');
+  const length = legacy ? LEGACY_DETAIL_CONTROLS.length : DETAIL_CONTROLS.length;
   if (
-    !Array.isArray(value) ||
-    value.length !== DETAIL_CONTROLS.length ||
-    new Set(value).size !== DETAIL_CONTROLS.length ||
+    value.length !== length ||
+    new Set(value).size !== length ||
     !value.every((entry) => DETAIL_CONTROLS.includes(entry))
   )
     throw new Error(
-      'control_order: include ambient, target, mode, color and brightness exactly once',
+      'control_order: include ambient, target, mode, color, brightness and speed exactly once',
     );
-  return [...value];
+  return legacy ? [...value, 'speed'] : [...value];
 }
 
 export function parseImageBackground(value: unknown): string {
@@ -113,6 +117,7 @@ export function parseConfig(value: unknown): CardConfig {
     show_mode: value.show_mode !== false,
     show_color: value.show_color !== false,
     show_brightness: value.show_brightness !== false,
+    show_speed: value.show_speed !== false,
     ...(typeof value.name === 'string' ? { name: value.name } : {}),
   };
 }

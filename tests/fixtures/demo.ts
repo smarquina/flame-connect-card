@@ -5,6 +5,7 @@ import type { HomeAssistant, RegistryEntry } from '../../src/adapters/home-assis
 const cards: FlameConnectCard[] = [];
 const hass = fakeHass();
 const calls: unknown[] = [];
+const entities = { ...config.entities, speed: 'number.fire_speed' };
 const demo = { hass, calls, fail: false, defer: false, update, add };
 declare global {
   interface Window {
@@ -17,14 +18,14 @@ function update(): void {
 }
 function add(name = 'Living room'): FlameConnectCard {
   const card = document.createElement('flame-connect-card') as FlameConnectCard;
-  card.setConfig({ ...config, name });
+  card.setConfig({ ...config, name, entities });
   card.hass = hass;
   cards.push(card);
   document.querySelector('main')!.append(card);
   return card;
 }
 hass.callWS = async <T>() => {
-  const entries: RegistryEntry[] = Object.entries(config.entities)
+  const entries: RegistryEntry[] = Object.entries(entities)
     .filter(([role]) => role !== 'ambient')
     .map(([role, entity]) => ({
       entity_id: entity!,
@@ -44,6 +45,7 @@ hass.callService = async (domain, service, data, target) => {
   if (service === 'turn_on' || service === 'turn_off')
     entity.state = service === 'turn_on' ? 'on' : 'off';
   if (service === 'set_hvac_mode') entity.state = String(data.hvac_mode);
+  if (service === 'set_value') entity.state = String(data.value);
   if (service === 'set_temperature') entity.attributes.temperature = data.temperature;
   if (service === 'set_preset_mode') entity.attributes.preset_mode = data.preset_mode;
   if (service === 'select_option') entity.state = String(data.option);

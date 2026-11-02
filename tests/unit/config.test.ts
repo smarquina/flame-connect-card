@@ -91,7 +91,7 @@ it.each([
 it('preserves a custom control order without mutating the provided array', () => {
   const control_order = ['brightness', 'color', 'mode', 'target', 'ambient'];
   const parsed = parseConfig({ ...config, control_order });
-  expect(parsed.control_order).toEqual(control_order);
+  expect(parsed.control_order).toEqual([...control_order, 'speed']);
   expect(parsed.control_order).not.toBe(control_order);
 });
 
@@ -116,4 +116,22 @@ it.each([
   '#12345g',
 ])('rejects unsafe or invalid background %#', (image_background) => {
   expect(() => parseConfig({ ...config, image_background })).toThrow('image_background:');
+});
+
+it('accepts a speed number binding and normalizes new and legacy order configurations', () => {
+  const entities = { ...config.entities, speed: 'number.fire_speed' };
+  expect(parseConfig({ ...config, entities, show_speed: false })).toMatchObject({
+    entities,
+    show_speed: false,
+  });
+  expect(parseConfig({ type: CARD_TYPE, entities }).show_speed).toBe(true);
+  const control_order = ['speed', 'brightness', 'color', 'mode', 'target', 'ambient'];
+  expect(parseConfig({ ...config, control_order }).control_order).toEqual(control_order);
+  expect(() => parseConfig({ ...config, show_speed: 'false' })).toThrow('show_speed');
+  expect(() =>
+    parseConfig({ ...config, entities: { ...entities, speed: 'select.speed' } }),
+  ).toThrow('number');
+  expect(() =>
+    parseConfig({ ...config, control_order: ['speed', 'target', 'mode', 'color', 'brightness'] }),
+  ).toThrow('control_order');
 });

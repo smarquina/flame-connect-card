@@ -135,10 +135,11 @@ export class FlameConnectCard extends LitElement {
         font-weight: 600;
         margin-top: 6px;
       }
-      .settings > [data-control='target'] {
+      .settings > [data-control='target'],
+      .settings > [data-control='speed'] {
         grid-column: 1 / -1;
       }
-      .target-row {
+      .slider-row {
         display: flex;
         align-items: center;
         gap: 14px;
@@ -146,19 +147,19 @@ export class FlameConnectCard extends LitElement {
         border: 1px solid var(--divider-color, #ddd);
         border-radius: 18px;
       }
-      .target-label {
+      .slider-label {
         display: flex;
         align-items: center;
         gap: 10px;
         flex-shrink: 0;
       }
-      .target-label > svg {
+      .slider-label > svg {
         box-sizing: content-box;
         padding: 10px;
         border-radius: 50%;
         background: var(--secondary-background-color, #f2f2f2);
       }
-      .target-value {
+      .slider-value {
         font-size: 1.1rem;
         font-weight: 600;
         white-space: nowrap;
@@ -298,9 +299,6 @@ export class FlameConnectCard extends LitElement {
   private snapshot(): FireplaceState | undefined {
     return this.config && this.currentHass ? mapState(this.config, this.currentHass) : undefined;
   }
-  private temperature(value: number): void {
-    void this.run({ kind: 'temperature', value });
-  }
   private selectControl(state: FireplaceState, kind: 'mode' | 'color' | 'brightness') {
     const options = kind === 'mode' ? visibleModes(state) : state[kind].options;
     const current = kind === 'mode' ? state.mode : state[kind].value;
@@ -370,47 +368,69 @@ export class FlameConnectCard extends LitElement {
     return `${Math.max(0, Math.min(1, fraction)) * 100}%`;
   }
   private targetControl(state: FireplaceState) {
-    const canTarget =
-      state.target !== null &&
-      state.minimum !== null &&
-      state.maximum !== null &&
-      state.step !== null &&
-      state.maximum > state.minimum;
-    const minimum = state.minimum ?? 0;
-    const maximum = state.maximum ?? minimum;
-    const value = state.target?.value ?? minimum;
+    return this.sliderControl(
+      'target',
+      state.target?.value ?? null,
+      state.minimum,
+      state.maximum,
+      state.step,
+      state.target?.unit ?? '',
+    );
+  }
+  private speedControl(state: FireplaceState) {
+    return this.sliderControl(
+      'speed',
+      state.speed?.value ?? null,
+      state.speed?.minimum ?? null,
+      state.speed?.maximum ?? null,
+      state.speed?.step ?? null,
+      '',
+    );
+  }
+  private sliderControl(
+    kind: 'target' | 'speed',
+    confirmed: number | null,
+    lower: number | null,
+    upper: number | null,
+    step: number | null,
+    unit: string,
+  ) {
+    const enabled =
+      confirmed !== null && lower !== null && upper !== null && step !== null && upper > lower;
+    const minimum = lower ?? 0;
+    const maximum = upper ?? minimum;
+    const value = confirmed ?? minimum;
     const fill = this.sliderFill(value, minimum, maximum);
     const language = this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en';
-    const reading = state.target
-      ? numberText(language, state.target.value) + ' ' + state.target.unit
-      : '—';
-    return html`<div class="target-row">
-      <label class="target-label" for="target" title=${this.t('target')}>
-        ${icon('target')}<span class="sr-only">${this.t('target')}</span>
-        <span class="target-value">${reading}</span>
+    const format = (number: number) => numberText(language, number) + (unit ? ' ' + unit : '');
+    const reading = confirmed === null ? '—' : format(confirmed);
+    return html`<div class="slider-row">
+      <label class="slider-label" for=${kind} title=${this.t(kind)}>
+        ${icon(kind)}<span class="sr-only">${this.t(kind)}</span>
+        <span class="slider-value ${kind}-value">${reading}</span>
       </label>
       <input
-        id="target"
+        id=${kind}
         type="range"
-        aria-label=${this.t('target')}
+        aria-label=${this.t(kind)}
         aria-valuetext=${reading}
         .value=${String(value)}
         min=${minimum}
         max=${maximum}
-        step=${state.step ?? 1}
+        step=${step ?? 1}
         style=${styleMap({ '--fill': fill })}
-        ?disabled=${this.disabled || !canTarget}
+        ?disabled=${this.disabled || !enabled}
         @input=${(event: Event) => {
           const input = event.currentTarget as HTMLInputElement;
           input.style.setProperty('--fill', this.sliderFill(input.valueAsNumber, minimum, maximum));
-          input.setAttribute(
-            'aria-valuetext',
-            numberText(language, input.valueAsNumber) + ' ' + (state.target?.unit ?? ''),
-          );
+          input.setAttribute('aria-valuetext', format(input.valueAsNumber));
         }}
         @change=${(event: Event) => {
           const input = event.currentTarget as HTMLInputElement;
-          this.temperature(input.valueAsNumber);
+          void this.run({
+            kind: kind === 'target' ? 'temperature' : 'speed',
+            value: input.valueAsNumber,
+          });
           input.value = String(value);
           input.style.setProperty('--fill', fill);
           input.setAttribute('aria-valuetext', reading);
@@ -453,6 +473,7 @@ export class FlameConnectCard extends LitElement {
       mode: 'climate',
       color: 'color',
       brightness: 'brightness',
+      speed: 'speed',
     } as const;
     if (!this.isVisible(config, `show_${kind}`, roles[kind])) return nothing;
     const renderers = {
@@ -461,6 +482,7 @@ export class FlameConnectCard extends LitElement {
       mode: () => this.selectControl(state, 'mode'),
       color: () => this.selectControl(state, 'color'),
       brightness: () => this.selectControl(state, 'brightness'),
+      speed: () => this.speedControl(state),
     };
     return html`<div data-control=${kind}>${renderers[kind]()}</div>`;
   }

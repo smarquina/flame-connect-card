@@ -30,6 +30,11 @@ export class HassActionGateway implements ActionGateway {
         service = 'set_hvac_mode';
         data = { hvac_mode: command.value ? 'heat' : 'off' };
         break;
+      case 'speed':
+        domain = 'number';
+        service = 'set_value';
+        data = { value: command.value };
+        break;
       case 'temperature':
         domain = 'climate';
         service = 'set_temperature';

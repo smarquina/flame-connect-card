@@ -62,6 +62,26 @@ function limits(attr: Record<string, unknown>) {
   };
 }
 
+function speedSetting(entity: HassEntity | undefined): FireplaceState['speed'] {
+  if (!available(entity) || entity.state.trim() === '') return null;
+  const value = Number(entity.state);
+  const minimum = numeric(entity.attributes.min);
+  const maximum = numeric(entity.attributes.max);
+  const step = numeric(entity.attributes.step);
+  if (
+    !Number.isFinite(value) ||
+    minimum === null ||
+    maximum === null ||
+    step === null ||
+    step <= 0 ||
+    maximum < minimum ||
+    value < minimum ||
+    value > maximum
+  )
+    return null;
+  return { value, minimum, maximum, step };
+}
+
 export function mapState(config: CardConfig, hass: HomeAssistant): FireplaceState {
   const get = (role: keyof CardConfig['entities']) => hass.states[config.entities[role] ?? ''];
   const climate = get('climate');
@@ -75,6 +95,7 @@ export function mapState(config: CardConfig, hass: HomeAssistant): FireplaceStat
   const targetValue = numeric(attr.temperature);
   const friendlyName = climate?.attributes.friendly_name ?? flame?.attributes.friendly_name;
   return {
+    speed: speedSetting(get('speed')),
     name: config.name ?? (typeof friendlyName === 'string' ? friendlyName : 'Fireplace'),
     power: onOff(get('power')),
     flame: config.entities.flame ? onOff(flame) : false,
