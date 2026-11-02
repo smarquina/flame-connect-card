@@ -125,7 +125,7 @@ export class FlameConnectCardEditor extends LitElement {
           this.currentHass?.states[entity]?.attributes.device_class === 'temperature'
         );
       })
-      .sort();
+      .sort((left, right) => left.localeCompare(right, 'en'));
   }
   protected render() {
     const bindings = this.bindings();

@@ -26,6 +26,12 @@ jobs:
         run: test -n "$SONAR_TOKEN" || { echo 'Configure SONAR_TOKEN for the Flame Connect Card SonarQube Cloud project.'; exit 1; }
       - run: npm ci --ignore-scripts
       - run: npm test
+      - name: Cache SonarQube packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
       - uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
