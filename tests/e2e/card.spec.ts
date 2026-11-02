@@ -78,15 +78,19 @@ test('controls flame and heating independently and reflects external updates', a
 
 test('keeps room and target temperatures independent and validates bounds', async ({ page }) => {
   await expect(page.getByText('19.5 °C', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Increase target temperature' }).click();
-  await expect(
-    page.getByRole('spinbutton', { name: 'Target temperature', exact: true }),
-  ).toHaveValue('22.5');
+  await page.getByRole('slider', { name: 'Target temperature', exact: true }).press('ArrowRight');
+  await expect(page.getByRole('slider', { name: 'Target temperature', exact: true })).toHaveValue(
+    '22.5',
+  );
   await expect(page.getByText('19.5 °C', { exact: true })).toBeVisible();
-  await page.getByRole('spinbutton', { name: 'Target temperature', exact: true }).fill('99');
-  await page.getByRole('spinbutton', { name: 'Target temperature', exact: true }).press('Tab');
-  await expect(page.getByRole('alert')).toContainText('supported value');
-  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
+  const slider = page.getByRole('slider', { name: 'Target temperature', exact: true });
+  await slider.press('End');
+  await expect(slider).toHaveValue('30');
+  await slider.press('Home');
+  await expect(slider).toHaveValue('15');
+  await slider.press('ArrowLeft');
+  await expect(slider).toHaveValue('15');
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(3);
 });
 
 test('reads preset/color/brightness options and sends supported discrete selections', async ({
@@ -113,7 +117,7 @@ test('shows English and Spanish according to Home Assistant language', async ({ 
   });
   await expect(page.getByRole('button', { name: 'Llama · Encendido' })).toBeVisible();
   await expect(
-    page.getByRole('spinbutton', { name: 'Temperatura objetivo', exact: true }),
+    page.getByRole('slider', { name: 'Temperatura objetivo', exact: true }),
   ).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Brillo de llama' })).toBeVisible();
   await expect(page.getByText('19,5 °C', { exact: true })).toBeVisible();
@@ -260,9 +264,7 @@ test('supports the dark theme without losing contrast or keyboard controls', asy
   expect(
     (await new AxeBuilder({ page }).include('flame-connect-card').analyze()).violations,
   ).toEqual([]);
-  await expect(
-    page.getByRole('spinbutton', { name: 'Target temperature', exact: true }),
-  ).toBeEnabled();
+  await expect(page.getByRole('slider', { name: 'Target temperature', exact: true })).toBeEnabled();
 });
 
 test('groups icon-only actions and switches the power icon between start and shutdown', async ({
@@ -330,9 +332,9 @@ test('visual editor hides the target independently while heating remains control
       .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-control'))),
   ).toEqual(['ambient', 'mode', 'target']);
   await editor.getByRole('checkbox', { name: 'Show target temperature', exact: true }).uncheck();
-  await expect(
-    page.getByRole('spinbutton', { name: 'Target temperature', exact: true }),
-  ).toHaveCount(0);
+  await expect(page.getByRole('slider', { name: 'Target temperature', exact: true })).toHaveCount(
+    0,
+  );
   await expect(page.getByText('19.5 °C', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Heating · On', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Heating · Off', exact: true })).toBeVisible();
@@ -344,8 +346,43 @@ test('visual editor hides the target independently while heating remains control
   await editor.getByRole('checkbox', { name: 'Show heating control', exact: true }).uncheck();
   await expect(page.locator('flame-connect-card .toggles')).toBeHidden();
   await editor.getByRole('checkbox', { name: 'Show target temperature', exact: true }).check();
-  await expect(
-    page.getByRole('spinbutton', { name: 'Target temperature', exact: true }),
-  ).toHaveValue('22');
+  await expect(page.getByRole('slider', { name: 'Target temperature', exact: true })).toHaveValue(
+    '22',
+  );
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
+});
+
+test('temperature slider commits once per drag and displays confirmed readback', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    window.demo.defer = true;
+  });
+  const slider = page.getByRole('slider', { name: 'Target temperature', exact: true });
+  const box = (await slider.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.45, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2, { steps: 8 });
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
+  await expect(page.locator('flame-connect-card .target-value')).toHaveText('22 °C');
+  const requested = await slider.inputValue();
+  await page.mouse.up();
+  await expect(slider).toBeDisabled();
+  await expect(slider).toHaveValue('22');
+  await expect(page.locator('flame-connect-card .target-value')).toHaveText('22 °C');
+  const calls = await page.evaluate(() => window.demo.calls);
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({
+    domain: 'climate',
+    service: 'set_temperature',
+    data: { temperature: Number(requested) },
+    target: { entity_id: 'climate.fire_heating' },
+  });
+  await page.evaluate((temperature) => {
+    window.demo.hass.states['climate.fire_heating']!.attributes.temperature = temperature;
+    window.demo.update();
+  }, Number(requested));
+  await expect(slider).toBeEnabled();
+  await expect(slider).toHaveValue(requested);
+  await expect(page.getByText('19.5 °C', { exact: true })).toBeVisible();
 });

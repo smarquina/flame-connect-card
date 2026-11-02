@@ -101,28 +101,31 @@ it('sends each UI action and waits for matching readback', async () => {
   await settle(element, hass);
   expect(hass.callService).toHaveBeenCalledTimes(3);
 });
-it('edits target through buttons/input and validates malformed values', async () => {
+it('previews a slider gesture locally and sends one validated temperature on commit', async () => {
   const hass = fakeHass();
   hass.callService = vi.fn().mockResolvedValue(undefined);
   const element = await card(hass);
-  element
-    .shadowRoot!.querySelector<HTMLButtonElement>('[aria-label="Increase target temperature"]')!
-    .click();
-  hass.states['climate.fire_heating']!.attributes.temperature = 22.5;
-  await settle(element, hass);
-  element
-    .shadowRoot!.querySelector<HTMLButtonElement>('[aria-label="Decrease target temperature"]')!
-    .click();
-  hass.states['climate.fire_heating']!.attributes.temperature = 22;
-  await settle(element, hass);
-  input(element).value = '23';
-  input(element).dispatchEvent(new Event('change'));
+  const slider = input(element);
+  expect(slider.type).toBe('range');
+  expect(slider.min).toBe('15');
+  expect(slider.max).toBe('30');
+  expect(slider.step).toBe('0.5');
+  slider.value = '23';
+  slider.dispatchEvent(new Event('input'));
+  expect(slider.getAttribute('aria-valuetext')).toBe('23 °C');
+  expect(hass.callService).not.toHaveBeenCalled();
+  expect(element.shadowRoot!.querySelector('.target-value')!.textContent).toBe('22 °C');
+  slider.dispatchEvent(new Event('change'));
+  expect(slider.value).toBe('22');
   hass.states['climate.fire_heating']!.attributes.temperature = 23;
   await settle(element, hass);
-  input(element).value = '99';
-  input(element).dispatchEvent(new Event('change'));
+  expect(slider.value).toBe('23');
+  expect(hass.callService).toHaveBeenCalledTimes(1);
+  const forged = vi.spyOn(slider, 'valueAsNumber', 'get').mockReturnValue(99);
+  slider.dispatchEvent(new Event('change'));
   await vi.waitFor(() => expect(text(element)).toContain('supported value'));
-  expect(hass.callService).toHaveBeenCalledTimes(3);
+  forged.mockRestore();
+  expect(hass.callService).toHaveBeenCalledTimes(1);
 });
 it('selects presets and discrete settings without optimistic display', async () => {
   const hass = fakeHass();
@@ -348,7 +351,7 @@ it('does not trust change events from disabled temperature and option controls',
   expect(input(element).disabled).toBe(true);
   change(input(element), '22');
   await vi.waitFor(() => expect(text(element)).toContain('This control is unavailable'));
-  expect(input(element).value).toBe('');
+  expect(input(element).value).toBe('15');
   change(select(element, 'Heating / fan mode'), 'eco');
   await element.updateComplete;
   change(select(element, 'Flame color'), 'blue');
@@ -516,4 +519,26 @@ it('moves controls up and down, preserves hidden settings, and rejects boundary 
   element.setConfig({ ...config, control_order: ['invalid'] });
   await element.updateComplete;
   expect(element.shadowRoot!.querySelectorAll('[data-order-control]')).toHaveLength(5);
+});
+
+it('disables the slider for missing or fixed limits and handles unavailable temperatures without NaN', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  const climate = hass.states['climate.fire_heating']!;
+  climate.attributes.min_temp = 22;
+  climate.attributes.max_temp = 22;
+  const element = await card(hass);
+  expect(input(element).disabled).toBe(true);
+  expect(input(element).style.getPropertyValue('--fill')).toBe('0%');
+  climate.attributes.min_temp = null;
+  climate.attributes.max_temp = null;
+  climate.state = 'unavailable';
+  await settle(element, hass);
+  expect(input(element).disabled).toBe(true);
+  expect(element.shadowRoot!.querySelector('.target-value')!.textContent).toBe('—');
+  input(element).dispatchEvent(new Event('input'));
+  input(element).dispatchEvent(new Event('change'));
+  await element.updateComplete;
+  expect(hass.callService).not.toHaveBeenCalled();
+  expect(input(element).style.getPropertyValue('--fill')).toBe('0%');
 });
