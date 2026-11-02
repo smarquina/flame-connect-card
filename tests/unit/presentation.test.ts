@@ -501,12 +501,12 @@ it('moves controls up and down, preserves hidden settings, and rejects boundary 
   const move = (label: string) =>
     element.shadowRoot!.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!;
   move('Move up: Room temperature').dispatchEvent(new Event('click'));
-  move('Move down: Flame brightness').dispatchEvent(new Event('click'));
+  move('Move down: Flame speed').dispatchEvent(new Event('click'));
   expect(changes).not.toHaveBeenCalled();
   move('Move up: Target temperature').click();
   await element.updateComplete;
   expect((changes.mock.lastCall![0] as CustomEvent).detail.config).toMatchObject({
-    control_order: ['target', 'ambient', 'mode', 'color', 'brightness'],
+    control_order: ['target', 'ambient', 'mode', 'color', 'brightness', 'speed'],
     show_target: false,
     entities: config.entities,
   });
@@ -518,7 +518,7 @@ it('moves controls up and down, preserves hidden settings, and rejects boundary 
   expect(hass.callService).not.toHaveBeenCalled();
   element.setConfig({ ...config, control_order: ['invalid'] });
   await element.updateComplete;
-  expect(element.shadowRoot!.querySelectorAll('[data-order-control]')).toHaveLength(5);
+  expect(element.shadowRoot!.querySelectorAll('[data-order-control]')).toHaveLength(6);
 });
 
 it('disables the slider for missing or fixed limits and handles unavailable temperatures without NaN', async () => {
@@ -582,3 +582,42 @@ it.each(['transparent', '#000000', '#ffffff', '#123456'])(
     expect(scene.style.backgroundImage).toContain('data:image/png');
   },
 );
+
+it('renders a speed slider, commits once on release, and retains confirmed state until readback', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn().mockResolvedValue(undefined);
+  const entities = { ...config.entities, speed: 'number.fire_speed' };
+  const element = await card(hass, { entities });
+  const slider = () => element.shadowRoot!.querySelector<HTMLInputElement>('#speed')!;
+  expect(slider().min).toBe('1');
+  expect(slider().max).toBe('5');
+  expect(slider().step).toBe('1');
+  slider().value = '4';
+  slider().dispatchEvent(new Event('input'));
+  expect(hass.callService).not.toHaveBeenCalled();
+  expect(element.shadowRoot!.querySelector('.speed-value')!.textContent).toBe('3');
+  slider().dispatchEvent(new Event('change'));
+  await element.updateComplete;
+  expect(slider().disabled).toBe(true);
+  expect(slider().value).toBe('3');
+  expect(hass.callService).toHaveBeenCalledExactlyOnceWith(
+    'number',
+    'set_value',
+    { value: 4 },
+    { entity_id: 'number.fire_speed' },
+  );
+  hass.states['number.fire_speed']!.state = '4';
+  await settle(element, hass);
+  expect(slider().value).toBe('4');
+  expect(slider().disabled).toBe(false);
+  hass.states['number.fire_speed']!.state = 'unavailable';
+  await settle(element, hass);
+  expect(slider().disabled).toBe(true);
+  expect(element.shadowRoot!.querySelector('.speed-value')!.textContent).toBe('—');
+  slider().dispatchEvent(new Event('change'));
+  await element.updateComplete;
+  expect(hass.callService).toHaveBeenCalledTimes(1);
+  element.setConfig({ ...config, entities, show_speed: false });
+  await element.updateComplete;
+  expect(slider()).toBeNull();
+});

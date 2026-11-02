@@ -17,11 +17,12 @@ This community project is not affiliated with, approved by, or supported by Glen
 - Target-temperature slider with the climate entity's limits, step and unit; one command per completed drag and confirmed numeric readback.
 - Normal, Eco and Fan only presets when supported.
 - The fireplace's discrete flame color and brightness options.
+- A flame-speed slider using the Number entity's limits and step (typically 1–5 on supported devices).
 - An optional external room-temperature sensor, independent from the heating setpoint.
 - Whole-device power is shown by default when mapped; set `show_power: false` to hide it.
 - Configurable illustration background: transparent or any color through the visual editor.
 - Four static fireplace illustrations for effects off, flame only, heating only, and heating with flame.
-- Visual configuration with independent visibility settings for power, flame, heating, image, target/room temperatures, mode, color and brightness.
+- Visual configuration with independent visibility settings for power, flame, heating, image, target/room temperatures, mode, color, brightness and flame speed.
 - English/Spanish localization, keyboard controls and responsive layout.
 
 The illustrations use the supplied four-state artwork. They do not animate or reproduce every flame color. Heat symbols indicate **heating enabled**, not measured heat output. Fan only uses a ventilation icon and does not display heat symbols. An unavailable state is never illustrated as a confirmed shutdown.
@@ -62,6 +63,7 @@ entities:
   climate: climate.living_room_heating
   color: select.living_room_flame_color
   brightness: select.living_room_flame_brightness
+  speed: number.living_room_flame_speed
   ambient: sensor.living_room_temperature
 ```
 

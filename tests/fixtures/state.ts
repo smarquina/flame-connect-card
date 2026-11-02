@@ -55,6 +55,11 @@ export function fakeHass(): HomeAssistant {
         state: 'high',
         attributes: { options: ['high', 'low', 'flicker_high', 'flicker_low'] },
       },
+      'number.fire_speed': {
+        entity_id: 'number.fire_speed',
+        state: '3',
+        attributes: { friendly_name: 'Flame speed', min: 1, max: 5, step: 1 },
+      },
       'sensor.room_temperature': {
         entity_id: 'sensor.room_temperature',
         state: '19.5',

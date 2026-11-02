@@ -120,3 +120,22 @@ it('converts temperature once without changing equal units', () => {
   expect(convertTemperature(68, '°F', '°C')).toBe(20);
   expect(convertTemperature(20, '°C', '°F')).toBe(68);
 });
+
+describe('flame speed commands', () => {
+  const speedState = () => ({ ...state(), speed: { value: 3, minimum: 1, maximum: 5, step: 1 } });
+  it('validates speed without changing flame state and confirms actual readback', () => {
+    const current = speedState();
+    const before = structuredClone(current);
+    expect(() => validateCommand(current, { kind: 'speed', value: 4 })).not.toThrow();
+    expect(current).toEqual(before);
+    expect(isConfirmed(current, { kind: 'speed', value: 3 })).toBe(true);
+    expect(isConfirmed(current, { kind: 'speed', value: 4 })).toBe(false);
+    expect(isConfirmed({ ...current, speed: null }, { kind: 'speed', value: 3 })).toBe(false);
+    expect(() => validateCommand({ ...current, speed: null }, { kind: 'speed', value: 3 })).toThrow(
+      'unavailable',
+    );
+  });
+  it.each([NaN, Infinity, 0, 6, 2.5])('rejects invalid speed %s', (value) => {
+    expect(() => validateCommand(speedState(), { kind: 'speed', value })).toThrow('invalid_value');
+  });
+});

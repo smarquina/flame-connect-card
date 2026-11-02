@@ -1,7 +1,7 @@
 import {
   ControlError,
   SUPPORTED_PRESETS,
-  TEMPERATURE_STEP_TOLERANCE,
+  NUMERIC_STEP_TOLERANCE,
   TEMPERATURE_CONFIRMATION_TOLERANCE,
   type Command,
   type FireplaceState,
@@ -34,7 +34,20 @@ function validateTemperature(state: FireplaceState, value: number): void {
     !Number.isFinite(value) ||
     value < state.minimum ||
     value > state.maximum ||
-    Math.abs(steps - Math.round(steps)) > TEMPERATURE_STEP_TOLERANCE
+    Math.abs(steps - Math.round(steps)) > NUMERIC_STEP_TOLERANCE
+  )
+    throw new ControlError('invalid_value');
+}
+
+function validateSpeed(state: FireplaceState, value: number): void {
+  if (!state.speed) throw new ControlError('unavailable');
+  const { minimum, maximum, step } = state.speed;
+  if (
+    !Number.isFinite(value) ||
+    value < minimum ||
+    value > maximum ||
+    Math.abs((value - minimum) / step - Math.round((value - minimum) / step)) >
+      NUMERIC_STEP_TOLERANCE
   )
     throw new ControlError('invalid_value');
 }
@@ -52,6 +65,9 @@ export function validateCommand(state: FireplaceState, command: Command): void {
       break;
     case 'heating':
       if (!state.climateAvailable || state.heating === null) throw new ControlError('unavailable');
+      break;
+    case 'speed':
+      validateSpeed(state, command.value);
       break;
     case 'temperature': {
       validateTemperature(state, command.value);
@@ -71,6 +87,8 @@ export function validateCommand(state: FireplaceState, command: Command): void {
 
 export function isConfirmed(state: FireplaceState, command: Command): boolean {
   switch (command.kind) {
+    case 'speed':
+      return state.speed !== null && state.speed.value === command.value;
     case 'temperature':
       return (
         state.target !== null &&

@@ -217,3 +217,64 @@ describe('entity registry discovery', () => {
     await expect(discover(hass)).rejects.toThrow('Unauthorized');
   });
 });
+
+describe('flame speed entity contract', () => {
+  const speedConfig = { ...config, entities: { ...config.entities, speed: 'number.fire_speed' } };
+  it('maps numeric speed state and sends only the number service', async () => {
+    const hass = fakeHass();
+    expect(mapState(speedConfig, hass).speed).toEqual({
+      value: 3,
+      minimum: 1,
+      maximum: 5,
+      step: 1,
+    });
+    hass.callService = vi.fn().mockResolvedValue(undefined);
+    await new HassActionGateway(() => hass, speedConfig.entities).send({ kind: 'speed', value: 4 });
+    expect(hass.callService).toHaveBeenCalledExactlyOnceWith(
+      'number',
+      'set_value',
+      { value: 4 },
+      { entity_id: 'number.fire_speed' },
+    );
+  });
+  it.each(['unknown', 'unavailable', '', ' ', 'NaN', 'Infinity', '0', '6'])(
+    'rejects unavailable or invalid speed state %s',
+    (state) => {
+      const hass = fakeHass();
+      hass.states['number.fire_speed']!.state = state;
+      expect(mapState(speedConfig, hass).speed).toBeNull();
+    },
+  );
+  it.each([{ min: null }, { max: null }, { step: null }, { step: 0 }, { min: 5, max: 1 }])(
+    'rejects missing or invalid speed metadata %j',
+    (attributes) => {
+      const hass = fakeHass();
+      Object.assign(hass.states['number.fire_speed']!.attributes, attributes);
+      expect(mapState(speedConfig, hass).speed).toBeNull();
+    },
+  );
+  it('discovers speed only with the integration number domain and unique-ID suffix', async () => {
+    const hass = fakeHass();
+    hass.callWS = vi.fn().mockResolvedValue([
+      {
+        entity_id: 'light.fire_flame',
+        unique_id: 'id_flame',
+        platform: 'flame_connect',
+        device_id: 'device',
+      },
+      {
+        entity_id: 'number.fire_speed',
+        unique_id: 'id_speed',
+        platform: 'flame_connect',
+        device_id: 'device',
+      },
+      {
+        entity_id: 'select.wrong_speed',
+        unique_id: 'id_speed',
+        platform: 'flame_connect',
+        device_id: 'device',
+      },
+    ]);
+    expect((await discover(hass))[0]!.entities.speed).toBe('number.fire_speed');
+  });
+});

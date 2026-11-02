@@ -78,5 +78,7 @@
   "image_background": "Fondo de la imagen de la chimenea",
   "background_style": "Tipo de fondo",
   "background_none": "Ninguno (transparente)",
-  "background_color": "Color de fondo"
+  "background_color": "Color de fondo",
+  "speed": "Velocidad de llama",
+  "show_speed": "Mostrar velocidad de llama"
 }

@@ -16,4 +16,6 @@ A clock icon indicates a command awaiting confirmation. A warning icon indicates
 
 The power button requires `entities.power`. It appears by default when mapped unless `show_power: false` is configured. A start triangle offers power-on; a power symbol offers shutdown.
 
+If flame speed is missing, check that the model exposes its Flame speed Number entity, enable that entity if needed, map it in the card and enable **Show flame speed**. The card reads its numeric range and step from Home Assistant; it does not synthesize speed controls for unsupported devices.
+
 Report card version, backend version, HA version, browser, fireplace model and the affected entity domains. Include a minimal redacted card configuration only when needed. Do not post credentials, JWTs, native callback URLs or full HA state exports.

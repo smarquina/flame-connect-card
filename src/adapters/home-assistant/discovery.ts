@@ -8,6 +8,7 @@ const SUFFIXES: Record<DiscoveredRole, string> = {
   climate: '_heating',
   color: '_color',
   brightness: '_brightness',
+  speed: '_speed',
 };
 const DOMAINS: Record<DiscoveredRole, string> = {
   power: 'switch.',
@@ -15,6 +16,7 @@ const DOMAINS: Record<DiscoveredRole, string> = {
   climate: 'climate.',
   color: 'select.',
   brightness: 'select.',
+  speed: 'number.',
 };
 export interface DiscoveredFireplace {
   id: string;
