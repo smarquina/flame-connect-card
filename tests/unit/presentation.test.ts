@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import '../../src/index';
 import { FlameConnectCard } from '../../src/presentation/card';
 import { FlameConnectCardEditor } from '../../src/presentation/editor';
+import { FireplaceController } from '../../src/application/controller';
 import { config, fakeHass } from '../fixtures/state';
 import type { HomeAssistant, RegistryEntry } from '../../src/adapters/home-assistant/types';
 import type { CardConfig } from '../../src/domain/model';
@@ -9,6 +10,7 @@ import type { CardConfig } from '../../src/domain/model';
 afterEach(() => {
   document.body.replaceChildren();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 async function card(hass = fakeHass(), override: Partial<CardConfig> = {}) {
   const element = document.createElement('flame-connect-card') as FlameConnectCard;
@@ -272,4 +274,122 @@ it('editor falls back to manual configuration when registry access fails and loc
   await vi.waitFor(() => expect(text(element)).toContain('detección automática'));
   expect(text(element)).toContain('Temperatura ambiente');
   expect(text(element)).toContain('Calefacción');
+});
+
+it('renders the editor before HA context exists and ignores non-object configurations', async () => {
+  const element = document.createElement('flame-connect-card-editor') as FlameConnectCardEditor;
+  document.body.append(element);
+  element.setConfig([]);
+  await element.updateComplete;
+  expect(text(element)).toContain('Card title');
+  expect(select(element, 'Flame').options).toHaveLength(1);
+  const emitted = vi.fn();
+  element.addEventListener('config-changed', emitted);
+  element.setConfig({ type: config.type, entities: { flame: 'light.fire_flame' } });
+  const hass = fakeHass();
+  hass.callWS = vi.fn().mockResolvedValue([
+    {
+      entity_id: 'light.fire_flame',
+      unique_id: 'id_flame',
+      platform: 'flame_connect',
+      device_id: 'device',
+      disabled_by: null,
+    },
+  ]);
+  element.hass = hass;
+  await element.updateComplete;
+  await Promise.resolve();
+  await element.updateComplete;
+  change(select(element, 'Choose a Flame Connect fireplace'), 'device');
+  expect((emitted.mock.calls[0]![0] as CustomEvent).detail.config.entities).toEqual({
+    flame: 'light.fire_flame',
+  });
+});
+
+it('uses English defaults when a frontend context has not provided a language yet', async () => {
+  const hass = fakeHass();
+  Reflect.deleteProperty(hass, 'language');
+  const element = await card(hass);
+  expect(text(element)).toContain('Room temperature');
+  expect(text(element)).toContain('19.5 °C');
+});
+
+it('supports a heating-only card without presenting a decorative flame control', async () => {
+  const element = await card(fakeHass(), { entities: { climate: 'climate.fire_heating' } });
+  expect(text(element)).toContain('Heating enabled');
+  expect(button(element, 'Heating').disabled).toBe(false);
+  expect(button(element, 'Flame')).toBeUndefined();
+  expect(input(element).value).toBe('22');
+});
+
+it('redacts unexpected application errors and ignores events from a removed card', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn().mockResolvedValue(undefined);
+  const element = await card(hass);
+  vi.spyOn(FireplaceController.prototype, 'execute').mockRejectedValueOnce(
+    new Error('private details'),
+  );
+  button(element, 'Flame').click();
+  await vi.waitFor(() => expect(text(element)).toContain('The action failed'));
+  expect(text(element)).not.toContain('private details');
+  const staleButton = button(element, 'Flame');
+  element.remove();
+  staleButton.click();
+  await Promise.resolve();
+  expect(hass.callService).not.toHaveBeenCalled();
+});
+
+it('does not trust change events from disabled temperature and option controls', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  hass.states['climate.fire_heating']!.state = 'unavailable';
+  hass.states['select.fire_color']!.state = 'unavailable';
+  const element = await card(hass);
+  expect(input(element).disabled).toBe(true);
+  change(input(element), '22');
+  await vi.waitFor(() => expect(text(element)).toContain('This control is unavailable'));
+  expect(input(element).value).toBe('');
+  change(select(element, 'Mode'), 'eco');
+  await element.updateComplete;
+  change(select(element, 'Flame color'), 'blue');
+  await element.updateComplete;
+  expect(select(element, 'Flame color').value).toBe('');
+  expect(hass.callService).not.toHaveBeenCalled();
+});
+
+it('reports a generic configuration failure if the host event API throws a non-Error value', async () => {
+  const element = await editor();
+  vi.spyOn(element, 'dispatchEvent').mockImplementationOnce(() => {
+    throw 'private host details';
+  });
+  change(
+    element.shadowRoot!.querySelector<HTMLInputElement>('[aria-label="Card title"]')!,
+    'Another title',
+  );
+  await element.updateComplete;
+  expect(text(element)).toContain('Invalid configuration');
+  expect(text(element)).not.toContain('private host details');
+});
+
+it('loads duplicate resource modules without redefining elements or duplicating card-picker entries', async () => {
+  const registry = window as unknown as { customCards: { type: string }[] };
+  const previous = registry.customCards;
+  const define = vi.spyOn(customElements, 'define');
+  try {
+    registry.customCards = [{ type: 'another-card' }];
+    vi.resetModules();
+    await import('../../src/index');
+    expect(registry.customCards.map((entry) => entry.type)).toEqual([
+      'another-card',
+      'flame-connect-card',
+    ]);
+    vi.resetModules();
+    await import('../../src/index');
+    expect(
+      registry.customCards.filter((entry) => entry.type === 'flame-connect-card'),
+    ).toHaveLength(1);
+    expect(define).not.toHaveBeenCalled();
+  } finally {
+    registry.customCards = previous;
+  }
 });

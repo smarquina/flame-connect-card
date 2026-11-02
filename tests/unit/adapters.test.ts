@@ -154,6 +154,9 @@ describe('exact service contract', () => {
   });
   it('fails when binding or service is unavailable', async () => {
     await expect(
+      new HassActionGateway(() => undefined, config.entities).send({ kind: 'flame', value: true }),
+    ).rejects.toThrow('unavailable');
+    await expect(
       new HassActionGateway(fakeHass, {}).send({ kind: 'color', value: 'blue' }),
     ).rejects.toThrow('unavailable');
     const hass = fakeHass();

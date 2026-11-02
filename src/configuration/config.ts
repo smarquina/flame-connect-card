@@ -12,11 +12,13 @@ const RECORD = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export function validateImage(value: unknown): string {
-  if (typeof value !== 'string' || !/^\/(?!\/)[^\s\\]*$/.test(value))
+  if (typeof value !== 'string')
     throw new Error('images: use a same-origin absolute path, e.g. /local/fireplace.png');
   const url = new URL(value, 'https://home-assistant.invalid');
   if (url.origin !== 'https://home-assistant.invalid')
-    throw new Error('images: external URLs are not supported');
+    throw new Error('images: external URLs are not supported; use a same-origin absolute path');
+  if (!/^\/(?!\/)[^\s\\]*$/.test(value))
+    throw new Error('images: use a same-origin absolute path, e.g. /local/fireplace.png');
   return value;
 }
 
