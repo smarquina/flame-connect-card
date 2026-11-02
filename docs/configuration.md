@@ -12,7 +12,7 @@ Use the visual card editor or the dashboard's YAML card editor. These options co
 | `show_image`      | boolean | `true`                                       | Display the fireplace illustration                           |
 | `show_flame`      | boolean | `true`                                       | Display the decorative flame button                          |
 | `show_heating`    | boolean | `true`                                       | Display the heating/ventilation button                       |
-| `show_target`     | boolean | `true`                                       | Display the target temperature input and adjustment buttons  |
+| `show_target`     | boolean | `true`                                       | Display the target-temperature slider                        |
 | `show_ambient`    | boolean | `true`                                       | Display the external room-temperature reading                |
 | `show_mode`       | boolean | `true`                                       | Display the heating preset selector                          |
 | `show_color`      | boolean | `true`                                       | Display the flame color selector                             |
@@ -24,7 +24,7 @@ Use the visual card editor or the dashboard's YAML card editor. These options co
 
 In the dashboard, edit the card and use **Visible elements** to choose which controls and readings appear. The editor follows your Home Assistant language; Spanish users see **Elementos visibles**. All elements are visible by default when their required entities are mapped. Missing bindings still hide the corresponding elements.
 
-For example, uncheck **Show target temperature** to keep heating on/off and its mode selector while removing the setpoint input and its plus/minus buttons. The equivalent card configuration is:
+For example, uncheck **Show target temperature** to keep heating on/off and its mode selector while removing the target-temperature slider. The equivalent card configuration is:
 
 ```yaml
 type: custom:flame-connect-card
@@ -59,7 +59,9 @@ Disabled or nonexistent entities cannot be controlled. Color entities usually re
 
 ## Temperature
 
-The target uses the climate entity's exposed unit, limits and step; the card does not convert a command a second time. Room readings are converted to the target's unit when available, otherwise the HA unit preference or sensor unit is used. The original sensor state is never changed. Unknown, unavailable, empty, non-finite and incompatible readings display as unavailable. An unchanged temperature is not considered stale solely because its value has not changed.
+The target uses the climate entity's exposed unit, limits and step; the card does not convert a command a second time. The target is adjusted with a horizontal slider using those limits and increments. Dragging previews the position locally; releasing it sends one command. The numeric reading remains the confirmed setpoint until Home Assistant reports the change. Arrow keys adjust by one step, while Home/End select the minimum/maximum. Preview mode, pending commands, missing limits and fixed ranges disable the slider.
+
+Room readings are converted to the target's unit when available, otherwise the HA unit preference or sensor unit is used. The original sensor state is never changed. Unknown, unavailable, empty, non-finite and incompatible readings display as unavailable. An unchanged temperature is not considered stale solely because its value has not changed.
 
 Normal, Eco and Fan only are offered only when included in `preset_modes`. If another preset is active, the card displays it without silently replacing it. Brightness options can include `high`, `low`, `flicker_high` and `flicker_low`; palette combinations depend on the model.
 

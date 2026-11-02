@@ -14,7 +14,7 @@ This community project is not affiliated with, approved by, or supported by Glen
 ## Controls
 
 - Grouped icon buttons for whole-device power, decorative flame and heating/ventilation. The power button offers start when off and power-off when on; it requires a mapped power entity.
-- Target temperature with the climate entity's limits, step and unit.
+- Target-temperature slider with the climate entity's limits, step and unit; one command per completed drag and confirmed numeric readback.
 - Normal, Eco and Fan only presets when supported.
 - The fireplace's discrete flame color and brightness options.
 - An optional external room-temperature sensor, independent from the heating setpoint.

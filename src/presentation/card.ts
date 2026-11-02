@@ -135,19 +135,80 @@ export class FlameConnectCard extends LitElement {
         font-weight: 600;
         margin-top: 6px;
       }
-      .stepper {
+      .settings > [data-control='target'] {
+        grid-column: 1 / -1;
+      }
+      .target-row {
         display: flex;
         align-items: center;
-        gap: 6px;
-        margin-top: 6px;
+        gap: 14px;
+        padding: 12px;
+        border: 1px solid var(--divider-color, #ddd);
+        border-radius: 18px;
       }
-      .stepper input {
+      .target-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+      .target-label > svg {
+        box-sizing: content-box;
+        padding: 10px;
+        border-radius: 50%;
+        background: var(--secondary-background-color, #f2f2f2);
+      }
+      .target-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      input[type='range'] {
+        appearance: none;
+        -webkit-appearance: none;
         min-width: 0;
-        text-align: center;
+        width: 100%;
+        height: 48px;
+        min-height: 48px;
+        margin: 0;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 16px;
+        background: linear-gradient(
+          to right,
+          var(--state-climate-heat-color, #ffab56) var(--fill),
+          var(--secondary-background-color, #eee) var(--fill)
+        );
+        cursor: pointer;
       }
-      .stepper button {
-        padding: 8px 13px;
-        font-size: 1.2rem;
+      input[type='range']:disabled {
+        cursor: default;
+      }
+      input[type='range']::-webkit-slider-runnable-track {
+        height: 28px;
+        background: transparent;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 5px;
+        height: 28px;
+        border: 0;
+        border-radius: 4px;
+        background: #fff;
+        box-shadow: 0 0 0 1px #888;
+      }
+      input[type='range']::-moz-range-track {
+        height: 28px;
+        background: transparent;
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 5px;
+        height: 28px;
+        border: 0;
+        border-radius: 4px;
+        background: #fff;
+        box-shadow: 0 0 0 1px #888;
       }
       @media (max-width: 360px) {
         header {
@@ -304,48 +365,57 @@ export class FlameConnectCard extends LitElement {
       ${icon(label === 'ventilation' ? 'mode' : kind)}
     </button>`;
   }
+  private sliderFill(value: number, minimum: number, maximum: number): string {
+    const fraction = maximum > minimum ? (value - minimum) / (maximum - minimum) : 0;
+    return `${Math.max(0, Math.min(1, fraction)) * 100}%`;
+  }
   private targetControl(state: FireplaceState) {
     const canTarget =
       state.target !== null &&
       state.minimum !== null &&
       state.maximum !== null &&
-      state.step !== null;
-    const value = state.target?.value;
-    return html`<div>
-      <label class="control-label" for="target" title=${this.t('target')}>
-        ${icon('target')}<span class="sr-only">${this.t('target')}</span>${state.target?.unit ?? ''}
+      state.step !== null &&
+      state.maximum > state.minimum;
+    const minimum = state.minimum ?? 0;
+    const maximum = state.maximum ?? minimum;
+    const value = state.target?.value ?? minimum;
+    const fill = this.sliderFill(value, minimum, maximum);
+    const language = this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en';
+    const reading = state.target
+      ? numberText(language, state.target.value) + ' ' + state.target.unit
+      : '—';
+    return html`<div class="target-row">
+      <label class="target-label" for="target" title=${this.t('target')}>
+        ${icon('target')}<span class="sr-only">${this.t('target')}</span>
+        <span class="target-value">${reading}</span>
       </label>
-      <div class="stepper">
-        <button
-          aria-label=${this.t('decrease')}
-          ?disabled=${this.disabled || !canTarget || value! <= state.minimum!}
-          @click=${() => this.temperature(Number((value! - state.step!).toFixed(3)))}
-        >
-          −
-        </button>
-        <input
-          id="target"
-          type="number"
-          aria-label=${this.t('target')}
-          .value=${value === undefined ? '' : String(value)}
-          min=${state.minimum ?? nothing}
-          max=${state.maximum ?? nothing}
-          step=${state.step ?? nothing}
-          ?disabled=${this.disabled || !canTarget}
-          @change=${(event: Event) => {
-            const input = event.currentTarget as HTMLInputElement;
-            this.temperature(input.valueAsNumber);
-            input.value = value === undefined ? '' : String(value);
-          }}
-        />
-        <button
-          aria-label=${this.t('increase')}
-          ?disabled=${this.disabled || !canTarget || value! >= state.maximum!}
-          @click=${() => this.temperature(Number((value! + state.step!).toFixed(3)))}
-        >
-          +
-        </button>
-      </div>
+      <input
+        id="target"
+        type="range"
+        aria-label=${this.t('target')}
+        aria-valuetext=${reading}
+        .value=${String(value)}
+        min=${minimum}
+        max=${maximum}
+        step=${state.step ?? 1}
+        style=${styleMap({ '--fill': fill })}
+        ?disabled=${this.disabled || !canTarget}
+        @input=${(event: Event) => {
+          const input = event.currentTarget as HTMLInputElement;
+          input.style.setProperty('--fill', this.sliderFill(input.valueAsNumber, minimum, maximum));
+          input.setAttribute(
+            'aria-valuetext',
+            numberText(language, input.valueAsNumber) + ' ' + (state.target?.unit ?? ''),
+          );
+        }}
+        @change=${(event: Event) => {
+          const input = event.currentTarget as HTMLInputElement;
+          this.temperature(input.valueAsNumber);
+          input.value = String(value);
+          input.style.setProperty('--fill', fill);
+          input.setAttribute('aria-valuetext', reading);
+        }}
+      />
     </div>`;
   }
   private ambientControl(state: FireplaceState) {
