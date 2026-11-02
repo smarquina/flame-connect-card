@@ -1117,7 +1117,7 @@ var it = {
 		}, this.emit();
 	}
 	options(e) {
-		return Object.keys(this.currentHass?.states ?? {}).filter((t) => t.startsWith(it[e]) ? e !== "ambient" || this.currentHass?.states[t]?.attributes.device_class === "temperature" : !1).sort();
+		return Object.keys(this.currentHass?.states ?? {}).filter((t) => t.startsWith(it[e]) ? e !== "ambient" || this.currentHass?.states[t]?.attributes.device_class === "temperature" : !1).sort((e, t) => e.localeCompare(t, "en"));
 	}
 	render() {
 		let e = this.bindings(), t = this.config.images;
