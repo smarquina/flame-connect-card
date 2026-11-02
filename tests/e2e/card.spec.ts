@@ -47,7 +47,8 @@ test('renders the four supplied fireplace states and a neutral unknown state', a
     window.demo.hass.states['light.fire_flame']!.state = 'unavailable';
     window.demo.update();
   });
-  await expect(scene).toContainText('Unavailable');
+  await expect(scene).toHaveAccessibleName(/State unavailable/);
+  await expect(scene.locator('svg')).toBeVisible();
   await expect(scene).toHaveCSS('background-image', 'none');
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
 });
@@ -128,7 +129,8 @@ test('does not equate service acceptance with device confirmation or replay comm
     window.demo.defer = true;
   });
   await page.getByRole('button', { name: 'Flame · On', exact: true }).click();
-  await expect(page.getByText('Waiting for confirmed state…')).toBeVisible();
+  await expect(page.locator('.feedback')).toBeVisible();
+  await expect(page.locator('.feedback')).toHaveAttribute('title', 'Waiting for confirmed state…');
   await expect(page.getByRole('button', { name: 'Flame · On', exact: true })).toBeDisabled();
   await page.evaluate(() => {
     window.demo.hass.states['light.fire_flame']!.state = 'off';
@@ -155,7 +157,8 @@ test('standby never implicitly enables power when clicking a flame control', asy
     window.demo.update();
   });
   await expect(page.getByRole('button', { name: 'Flame · Off', exact: true })).toBeDisabled();
-  await expect(page.getByText('Standby', { exact: true })).toBeVisible();
+  await expect(page.getByRole('img')).toHaveAccessibleName(/Standby/);
+  await expect(page.getByRole('button', { name: 'Turn fireplace on', exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
 });
 
@@ -258,4 +261,34 @@ test('supports the dark theme without losing contrast or keyboard controls', asy
   await expect(
     page.getByRole('spinbutton', { name: 'Target temperature', exact: true }),
   ).toBeEnabled();
+});
+
+test('groups icon-only actions and switches the power icon between start and shutdown', async ({
+  page,
+}, info) => {
+  const group = page.getByRole('group', { name: 'Fireplace controls' });
+  await expect(group.getByRole('button')).toHaveCount(3);
+  const shutdown = group.getByRole('button', { name: 'Turn fireplace off', exact: true });
+  const shutdownPath = await shutdown.locator('path').getAttribute('d');
+  for (const control of await group.getByRole('button').all()) {
+    expect((await control.innerText()).trim()).toBe('');
+    await expect(control.locator('svg')).toBeVisible();
+    const box = await control.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+  await shutdown.click();
+  const start = group.getByRole('button', { name: 'Turn fireplace on', exact: true });
+  await expect(start).toBeEnabled();
+  expect(await start.locator('path').getAttribute('d')).not.toBe(shutdownPath);
+  await start.click();
+  await expect(shutdown).toBeEnabled();
+  expect(await page.evaluate(() => window.demo.calls)).toEqual([
+    { domain: 'switch', service: 'turn_off', data: {}, target: { entity_id: 'switch.fire_power' } },
+    { domain: 'switch', service: 'turn_on', data: {}, target: { entity_id: 'switch.fire_power' } },
+  ]);
+  await expect(page.locator('flame-connect-card .hint')).toHaveCount(0);
+  await page
+    .locator('flame-connect-card')
+    .screenshot({ path: `test-results/icon-controls-${info.project.name}.png` });
 });

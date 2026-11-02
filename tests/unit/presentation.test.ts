@@ -23,7 +23,7 @@ async function card(hass = fakeHass(), override: Partial<CardConfig> = {}) {
 const text = (element: HTMLElement) => element.shadowRoot!.textContent!;
 const button = (element: HTMLElement, label: string) =>
   [...element.shadowRoot!.querySelectorAll('button')].find((entry) =>
-    entry.textContent!.includes(label),
+    (entry.getAttribute('aria-label') ?? entry.textContent!).includes(label),
   )!;
 const input = (element: HTMLElement) =>
   element.shadowRoot!.querySelector<HTMLInputElement>('#target')!;
@@ -96,7 +96,7 @@ it('sends each UI action and waits for matching readback', async () => {
   button(element, 'Heating').click();
   hass.states['climate.fire_heating']!.state = 'off';
   await settle(element, hass);
-  button(element, '⏻').click();
+  button(element, 'Turn fireplace off').click();
   hass.states['switch.fire_power']!.state = 'off';
   await settle(element, hass);
   expect(hass.callService).toHaveBeenCalledTimes(3);
@@ -157,7 +157,7 @@ it('supports preview, translations and lifecycle cancellation without leaking er
   // Programmatic click also must not send an action before the next render disables buttons.
   button(element, 'Flame').click();
   await element.updateComplete;
-  expect(text(element)).toContain('Preview');
+  expect(element.shadowRoot!.querySelector('.hint')).toBeNull();
   expect(hass.callService).not.toHaveBeenCalled();
   element.preview = false;
   await settle(element, hass);
@@ -184,7 +184,7 @@ it('handles climate, sensor, options and metadata becoming unavailable', async (
   hass.states['select.fire_color']!.state = 'unknown';
   const element = await card(hass, { name: undefined });
   expect(input(element).disabled).toBe(true);
-  expect(text(element)).toContain('Unavailable');
+  expect(element.shadowRoot!.querySelector('.reading')!.textContent).toBe('—');
   delete hass.states['climate.fire_heating'];
   delete hass.states['light.fire_flame'];
   await settle(element, hass);
@@ -392,4 +392,43 @@ it('loads duplicate resource modules without redefining elements or duplicating 
   } finally {
     registry.customCards = previous;
   }
+});
+
+it('groups icon-only power, flame and heating and changes the power action after readback', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn().mockResolvedValue(undefined);
+  const element = await card(hass);
+  const group = element.shadowRoot!.querySelector('[role="group"]')!;
+  expect(
+    [...group.querySelectorAll('button')].map((entry) => entry.getAttribute('aria-label')),
+  ).toEqual(['Turn fireplace off', 'Flame · On', 'Heating · On']);
+  for (const control of group.querySelectorAll('button')) {
+    expect(control.textContent!.trim()).toBe('');
+    expect(control.querySelector('svg')).not.toBeNull();
+    expect(control.title).toBe(control.getAttribute('aria-label'));
+  }
+  const offPath = button(element, 'Turn fireplace off').querySelector('path')!.getAttribute('d');
+  button(element, 'Turn fireplace off').click();
+  hass.states['switch.fire_power']!.state = 'off';
+  await settle(element, hass);
+  const start = button(element, 'Turn fireplace on');
+  expect(start.querySelector('path')!.getAttribute('d')).not.toBe(offPath);
+  start.click();
+  hass.states['switch.fire_power']!.state = 'on';
+  await settle(element, hass);
+  expect(button(element, 'Turn fireplace off').getAttribute('aria-pressed')).toBe('true');
+  expect(hass.callService).toHaveBeenNthCalledWith(
+    2,
+    'switch',
+    'turn_on',
+    {},
+    { entity_id: 'switch.fire_power' },
+  );
+  hass.states['switch.fire_power']!.state = 'unavailable';
+  await settle(element, hass);
+  expect(button(element, 'Turn fireplace on').disabled).toBe(true);
+  expect(element.shadowRoot!.querySelector('.hint')).toBeNull();
+  element.setConfig({ ...config, show_power: false });
+  await element.updateComplete;
+  expect(button(element, 'Turn fireplace on')).toBeUndefined();
 });

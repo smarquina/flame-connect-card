@@ -12,4 +12,8 @@
 | Illustration and physical output differ | Images represent configured effects. Thermostat cycling, actual heat output, brightness and color are not measured by the illustration.           |
 | Old UI after update                     | Refresh Companion/browser clients. For manual resources, update the version query.                                                                |
 
+A clock icon indicates a command awaiting confirmation. A warning icon indicates a failed or invalid action; hover it to read the message. Both expose their messages to screen readers. A dash in the room-temperature reading means the sensor is unavailable.
+
+The power button requires `entities.power`. It appears by default when mapped unless `show_power: false` is configured. A start triangle offers power-on; a power symbol offers shutdown.
+
 Report card version, backend version, HA version, browser, fireplace model and the affected entity domains. Include a minimal redacted card configuration only when needed. Do not post credentials, JWTs, native callback URLs or full HA state exports.

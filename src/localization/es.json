@@ -60,5 +60,8 @@
   "image_path": "Ruta local opcional, p. ej. /local/chimenea.png",
   "invalid_config": "Configuración no válida",
   "select": "Selecciona…",
-  "editor_description": "Controla una chimenea Flame Connect mediante sus entidades de Home Assistant."
+  "editor_description": "Controla una chimenea Flame Connect mediante sus entidades de Home Assistant.",
+  "power_on": "Encender chimenea",
+  "power_off": "Apagar chimenea",
+  "controls": "Controles de la chimenea"
 }

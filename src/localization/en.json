@@ -60,5 +60,8 @@
   "image_path": "Optional same-origin path, e.g. /local/fireplace.png",
   "invalid_config": "Invalid configuration",
   "select": "Select…",
-  "editor_description": "Control a Flame Connect fireplace using its Home Assistant entities."
+  "editor_description": "Control a Flame Connect fireplace using its Home Assistant entities.",
+  "power_on": "Turn fireplace on",
+  "power_off": "Turn fireplace off",
+  "controls": "Fireplace controls"
 }

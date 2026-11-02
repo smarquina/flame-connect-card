@@ -6,7 +6,7 @@ it('normalizes optional defaults and is idempotent', () => {
   expect(parseConfig(config)).toEqual(config);
   expect(parseConfig({ type: CARD_TYPE, entities: { flame: 'light.fire' } })).toMatchObject({
     version: 1,
-    show_power: false,
+    show_power: true,
     show_image: true,
     images: {},
   });
