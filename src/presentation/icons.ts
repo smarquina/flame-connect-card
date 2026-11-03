@@ -1,6 +1,7 @@
 import { html, svg } from 'lit';
 
 const paths = {
+  fireplace: 'M3 5h18v15H3z M3 8h18 M8 17c-2-3 2-4 3-7 3 3 6 5 3 7 M6 17h12',
   power_on: 'M8 5l11 7-11 7z',
   power_off: 'M12 3v9 M6.3 5.8a9 9 0 1 0 11.4 0',
   flame: 'M12 3c1 5 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 3 1 4 2 4 2-3 2-6 1-10z',

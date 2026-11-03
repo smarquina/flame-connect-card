@@ -89,5 +89,8 @@
   "compact_image": "Show image in compact view",
   "effect_status": "Flame and heating state",
   "compact_controls": "Controls in compact view",
-  "refresh_discovery": "Refresh fireplaces"
+  "refresh_discovery": "Refresh fireplaces",
+  "compact_style": "Compact style",
+  "standard": "Standard",
+  "chip": "Chip"
 }

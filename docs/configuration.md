@@ -21,6 +21,7 @@ Use the visual card editor or the dashboard's YAML card editor. These options co
 | `control_order`    | array   | `[ambient, target, mode, color, brightness, speed]` | Reading and selector order; include each key exactly once                                    |
 | `image_background` | string  | `"#000000"`                                         | Fireplace image background: `none`, `transparent`, `black`, `white` or a six-digit hex color |
 | `initial_view`     | string  | `expanded`                                          | Initial layout: `compact` or `expanded`                                                      |
+| `compact_style`    | string  | `standard`                                          | Compact presentation: `standard` or horizontal `chip`                                        |
 | `compact_image`    | boolean | `false`                                             | Allow the illustration as a thumbnail in compact view; still requires `show_image`           |
 | `compact_controls` | array   | `[]`                                                | Subset of detail controls available in compact view; shared order and visibility still apply |
 | `images`           | object  | Bundled artwork                                     | Optional per-state images                                                                    |
@@ -28,6 +29,13 @@ Use the visual card editor or the dashboard's YAML card editor. These options co
 ## Compact and expanded views
 
 Choose **Initial view** in the visual editor. Existing configurations default to **Expanded**. **Compact** shows the name, independent flame/heating status icons and the grouped quick actions. A dedicated expand/collapse button switches layouts in place without Mushroom, Browser Mod, another card instance or a popup. Opening details does not send fireplace commands.
+
+**Compact style → Chip** replaces the compact presentation with a horizontal summary: fireplace icon, name, state and independent flame/heating buttons. The icon is gray when both effects are confirmed off and orange when either is on; unknown effects show a warning, and confirmed standby takes precedence. Heating includes fan-only operation, labeled as ventilation. Pressing the summary expands the same card; action buttons never expand it. Unavailable actions are disabled. Whole-device power and detail controls are accessible in expanded view. Chip mode does not render `compact_image` or `compact_controls`; their saved values remain available when switching back to Standard.
+
+```yaml
+initial_view: compact
+compact_style: chip
+```
 
 **Controls in compact view** selects a subset of `ambient`, `target`, `mode`, `color`, `brightness` and `speed`. They follow the shared `control_order`. A globally hidden or unmapped control remains hidden in both layouts. The optional **Show image in compact view** uses the same four-state image and background as expanded view; `show_image: false` suppresses it everywhere.
 

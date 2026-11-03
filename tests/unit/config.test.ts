@@ -161,3 +161,28 @@ it('normalizes compact view defaults and copies a compact subset', () => {
   expect(parsed.compact_controls).not.toBe(compact_controls);
   expect(parsed.compact_image).toBe(true);
 });
+
+it('validates the optional compact chip style', () => {
+  expect(
+    parseConfig({
+      type: 'custom:flame-connect-card',
+      entities: { flame: 'light.fire' },
+      compact_style: 'chip',
+    }).compact_style,
+  ).toBe('chip');
+  expect(
+    parseConfig({
+      type: 'custom:flame-connect-card',
+      entities: { flame: 'light.fire' },
+      compact_style: 'standard',
+    }).compact_style,
+  ).toBe('standard');
+  for (const compact_style of ['invalid', null, 2, {}])
+    expect(() =>
+      parseConfig({
+        type: 'custom:flame-connect-card',
+        entities: { flame: 'light.fire' },
+        compact_style,
+      }),
+    ).toThrow('compact_style');
+});
