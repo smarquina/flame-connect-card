@@ -23,7 +23,7 @@ async function card(hass = fakeHass(), override: Partial<CardConfig> = {}) {
 const text = (element: HTMLElement) => element.shadowRoot!.textContent!;
 const button = (element: HTMLElement, label: string) =>
   [...element.shadowRoot!.querySelectorAll('button')].find((entry) =>
-    (entry.getAttribute('aria-label') ?? entry.textContent!).includes(label),
+    (entry.getAttribute('aria-label') ?? entry.textContent!).trim().startsWith(label),
   )!;
 const input = (element: HTMLElement) =>
   element.shadowRoot!.querySelector<HTMLInputElement>('#target')!;
@@ -844,4 +844,92 @@ it('clears discovery deadlines on disconnect', async () => {
   expect(vi.getTimerCount()).toBe(1);
   element.remove();
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it('renders independent chip actions, effective colors and expansion without service calls', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn().mockResolvedValue(undefined);
+  const element = await card(hass, { initial_view: 'compact', compact_style: 'chip' });
+  expect(element.getCardSize()).toBe(2);
+  expect(element.shadowRoot!.querySelector('[data-view="chip"]')).not.toBeNull();
+  for (const [flame, heat, active] of [
+    ['off', 'off', 'false'],
+    ['on', 'off', 'true'],
+    ['off', 'heat', 'true'],
+    ['on', 'heat', 'true'],
+    ['unavailable', 'unavailable', 'false'],
+    ['on', 'unavailable', 'true'],
+  ] as const) {
+    hass.states['light.fire_flame']!.state = flame;
+    hass.states['climate.fire_heating']!.state = heat;
+    await settle(element, hass);
+    expect(element.shadowRoot!.querySelector('.chip-icon')!.getAttribute('data-active')).toBe(
+      active,
+    );
+  }
+  hass.states['switch.fire_power']!.state = 'off';
+  await settle(element, hass);
+  expect(element.shadowRoot!.querySelector('.chip-icon')!.getAttribute('data-active')).toBe(
+    'false',
+  );
+  button(element, 'Expand controls').click();
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('[data-view="expanded"]')).not.toBeNull();
+  button(element, 'Collapse controls').click();
+  await element.updateComplete;
+  expect(element.getCardSize()).toBe(2);
+  expect(hass.callService).not.toHaveBeenCalled();
+});
+it('chip controls send only their own actions and preserve pending readback on expansion', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn().mockResolvedValue(undefined);
+  const element = await card(hass, { initial_view: 'compact', compact_style: 'chip' });
+  button(element, 'Flame').click();
+  await element.updateComplete;
+  expect(hass.callService).toHaveBeenLastCalledWith(
+    'light',
+    'turn_off',
+    {},
+    { entity_id: 'light.fire_flame' },
+  );
+  expect(element.shadowRoot!.querySelector('[data-view="chip"]')).not.toBeNull();
+  button(element, 'Expand controls').click();
+  await element.updateComplete;
+  expect(button(element, 'Heating').disabled).toBe(true);
+  hass.states['light.fire_flame']!.state = 'off';
+  await settle(element, hass);
+  button(element, 'Collapse controls').click();
+  await element.updateComplete;
+  button(element, 'Heating').click();
+  await element.updateComplete;
+  expect(hass.callService).toHaveBeenLastCalledWith(
+    'climate',
+    'set_hvac_mode',
+    { hvac_mode: 'off' },
+    { entity_id: 'climate.fire_heating' },
+  );
+  hass.states['climate.fire_heating']!.state = 'off';
+  await settle(element, hass);
+});
+it('chip honors hidden actions and falls back to a translated title', async () => {
+  const hass = fakeHass();
+  delete hass.states['climate.fire_heating']!.attributes.friendly_name;
+  delete hass.states['light.fire_flame']!.attributes.friendly_name;
+  const element = await card(hass, {
+    initial_view: 'compact',
+    compact_style: 'chip',
+    show_flame: false,
+    show_heating: false,
+    name: undefined,
+  });
+  expect(text(element)).toContain('Fireplace');
+  expect(element.shadowRoot!.querySelectorAll('.toggles button')).toHaveLength(0);
+});
+it('editor saves the compact style preference', async () => {
+  const element = await editor();
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  change(select(element, 'Compact style'), 'chip');
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.compact_style).toBe('chip');
 });

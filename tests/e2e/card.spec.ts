@@ -561,3 +561,33 @@ test('visual editor can retry registry discovery after a transient failure', asy
   );
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
 });
+
+test('chip provides independent quick actions and keyboard expansion', async ({ page }, info) => {
+  await page.evaluate((type) => {
+    const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+    card.setConfig({
+      type,
+      initial_view: 'compact',
+      compact_style: 'chip',
+      entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+    });
+    card.hass = window.demo.hass;
+  }, CARD_TYPE);
+  const card = page.locator('flame-connect-card');
+  await expect(card.locator('ha-card')).toHaveAttribute('data-view', 'chip');
+  await expect(card.locator('.chip-icon')).toHaveAttribute('data-active', 'true');
+  await card.screenshot({ path: `test-results/chip-${info.project.name}.png` });
+  await card.getByRole('button', { name: 'Flame · On', exact: true }).click();
+  await expect(card.locator('ha-card')).toHaveAttribute('data-view', 'chip');
+  await expect(card.getByRole('button', { name: 'Flame · Off', exact: true })).toBeEnabled();
+  await expect(card.getByRole('button', { name: 'Heating · On', exact: true })).toBeEnabled();
+  await card.getByRole('button', { name: /Expand controls:/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(card.locator('ha-card')).toHaveAttribute('data-view', 'expanded');
+  await expect(card.getByRole('button', { name: 'Collapse controls' })).toBeFocused();
+  await card.getByRole('button', { name: 'Collapse controls' }).click();
+  await expect(card.locator('ha-card')).toHaveAttribute('data-view', 'chip');
+  expect(
+    (await new AxeBuilder({ page }).include('flame-connect-card').analyze()).violations,
+  ).toEqual([]);
+});

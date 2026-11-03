@@ -25,16 +25,18 @@ import { sharedStyles } from './styles';
 import { icon } from './icons';
 import { renderSlider } from './slider';
 import { effectPresentation } from './effect-state';
+import { renderChip, chipStyles } from './chip';
 import './editor';
 const EXPANDED_ROWS = 8;
 const COMPACT_BASE_ROWS = 3;
+const CHIP_ROWS = 2;
 const DETAIL_ROWS = 2;
 const THUMBNAIL_ROWS = 2;
 const DEFAULT_SCENE_IMAGE = 'url(' + JSON.stringify(scene) + ')';
 
 export class FlameConnectCard extends LitElement {
   static readonly properties = { preview: { type: Boolean } };
-  static readonly styles = [sharedStyles, cardStyles];
+  static readonly styles = [sharedStyles, cardStyles, chipStyles];
   preview = false;
   private config?: CardConfig;
   private currentHass?: HomeAssistant;
@@ -73,6 +75,7 @@ export class FlameConnectCard extends LitElement {
   getCardSize(): number {
     if (this.expanded) return EXPANDED_ROWS;
     const config = this.config!;
+    if (config.compact_style === 'chip') return CHIP_ROWS;
     const details = config.compact_controls.filter((kind) => visibleControl(config, kind)).length;
     const thumbnail = config.compact_image && config.show_image ? THUMBNAIL_ROWS : 0;
     return COMPACT_BASE_ROWS + details * DETAIL_ROWS + thumbnail;
@@ -287,9 +290,15 @@ export class FlameConnectCard extends LitElement {
       })}
     </div>`;
   }
-  private changeView(): void {
+  private async changeView(): Promise<void> {
     this.expanded = !this.expanded;
     this.requestUpdate();
+    if (this.config!.compact_style === 'chip') {
+      await this.updateComplete;
+      this.renderRoot
+        .querySelector<HTMLButtonElement>(this.expanded ? '.view-toggle' : '.chip-summary')!
+        .focus();
+    }
   }
   private settings(state: FireplaceState, config: CardConfig) {
     const controls = config.control_order.filter(
@@ -300,10 +309,33 @@ export class FlameConnectCard extends LitElement {
       ${controls.map((kind) => this.detailControl(state, config, kind))}
     </div>`;
   }
+  private feedback() {
+    if (this.controller?.busy)
+      return html`<div class="feedback" role="status" title=${this.t('pending')}>
+        ${icon('pending')}<span class="sr-only">${this.t('pending')}</span>
+      </div>`;
+    if (this.error)
+      return html`<div class="feedback error" role="alert" title=${this.t(this.error)}>
+        ${icon('unavailable')}<span class="sr-only">${this.t(this.error)}</span>
+      </div>`;
+    return nothing;
+  }
+  private chip(state: FireplaceState, config: CardConfig) {
+    const name = state.name === 'Fireplace' ? this.t('title') : state.name;
+    const actions = html`<div class="toggles" role="group" aria-label=${this.t('controls')}>
+      ${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame') : nothing}
+      ${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating') : nothing}
+    </div>`;
+    return html`<ha-card data-view="chip" aria-label=${name}>
+      ${renderChip(state, name, this.t(this.status(state)), this.t('expand'), () => this.changeView(), actions)}
+      <div class="chip-feedback">${this.feedback()}</div>
+    </ha-card>`;
+  }
   protected render() {
     const state = this.snapshot();
     const config = this.config;
     if (!state || !config) return nothing;
+    if (!this.expanded && config.compact_style === 'chip') return this.chip(state, config);
     return html`<ha-card
       aria-label=${state.name}
       data-view=${this.expanded ? 'expanded' : 'compact'}
@@ -331,9 +363,7 @@ export class FlameConnectCard extends LitElement {
         <div class="toggles" role="group" aria-label=${this.t('controls')}>
           ${this.powerControl(state, config)}${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame') : nothing}${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating') : nothing}
         </div>
-        ${this.settings(state, config)}
-        ${this.controller?.busy ? html`<div class="feedback" role="status" title=${this.t('pending')}>${icon('pending')}<span class="sr-only">${this.t('pending')}</span></div>` : nothing}
-        ${this.error ? html`<div class="feedback error" role="alert" title=${this.t(this.error)}>${icon('unavailable')}<span class="sr-only">${this.t(this.error)}</span></div>` : nothing}
+        ${this.settings(state, config)} ${this.feedback()}
       </div>
     </ha-card>`;
   }

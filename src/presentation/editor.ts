@@ -381,6 +381,22 @@ export class FlameConnectCardEditor extends LitElement {
           }}
         />${this.t('compact_image')}</label
       >
+      <label
+        >${this.t('compact_style')}<select
+          aria-label=${this.t('compact_style')}
+          .value=${String(this.config.compact_style ?? 'standard')}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              compact_style: (event.currentTarget as HTMLSelectElement).value,
+            };
+            this.emit();
+          }}
+        >
+          <option value="standard">${this.t('standard')}</option>
+          <option value="chip">${this.t('chip')}</option>
+        </select></label
+      >
       ${this.compactControls()} ${this.orderControls()} ${this.backgroundControl()}
       <p class="hint">${this.t('power_hint')}</p>
       <details>
