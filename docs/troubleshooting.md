@@ -25,3 +25,7 @@ If automatic discovery failed temporarily, use **Refresh fireplaces** in the vis
 If a slider becomes unavailable despite a numeric entity value, check its minimum, maximum and step. Incoming off-step or out-of-range values are intentionally rejected.
 
 Report card version, backend version, HA version, browser, fireplace model and the affected entity domains. Include a minimal redacted card configuration only when needed. Do not post credentials, JWTs, native callback URLs or full HA state exports.
+
+## Chip opens inside the dashboard
+
+Update the card resource and reload the frontend, then select **Chip expansion → Dialog** in the visual editor. The default is `chip_expansion: modal`; remove an explicit `inline` value to use the default. A chip opens its own modal without Browser Mod. The standard compact layout continues to expand in the dashboard.

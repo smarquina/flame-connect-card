@@ -2,11 +2,11 @@
 
 ## Standalone compact control panel
 
-Add Flame Connect Card directly to a dashboard and select **Initial view → Compact**. The card opens its own expanded controls in place when the expand button is pressed. This configuration requires neither Mushroom nor Browser Mod. The expanded layout is also available as the initial view for a dedicated fireplace dashboard.
+Add Flame Connect Card directly to a dashboard and select **Initial view → Compact**. Select **Compact style → Chip** to open expanded controls in a native modal when the icon or summary is pressed. The dashboard row stays compact. The standard compact style and **Chip expansion → In dashboard** retain inline expansion. This configuration requires neither Mushroom nor Browser Mod. The expanded layout is also available as the initial view for a dedicated fireplace dashboard.
 
 ![Compact layout with simulated states](compact-preview.png)
 
-Both layouts use the same entity mappings, four-state artwork, image background, global visibility options and control order. Select **Controls in compact view** to keep frequently used readings or adjustments in the summary. These are a subset of the globally visible, mapped controls. Hide the target globally to omit it in both layouts.
+The chip, modal and inline layouts use the same entity mappings, four-state artwork, image background, global visibility options and control order. Select **Controls in compact view** to keep frequently used readings or adjustments in the summary. These are a subset of the globally visible, mapped controls. Hide the target globally to omit it in both layouts.
 
 The flame and heating indicators distinguish the two effects, including unknown state. A heating indicator means the feature is enabled; it does not prove actual heat output. Quick actions target only their corresponding entities. Pressing expand or collapse never toggles the fireplace.
 

@@ -397,6 +397,22 @@ export class FlameConnectCardEditor extends LitElement {
           <option value="chip">${this.t('chip')}</option>
         </select></label
       >
+      <label
+        >${this.t('chip_expansion')}<select
+          aria-label=${this.t('chip_expansion')}
+          .value=${String(this.config.chip_expansion ?? 'modal')}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              chip_expansion: (event.currentTarget as HTMLSelectElement).value,
+            };
+            this.emit();
+          }}
+        >
+          <option value="modal">${this.t('modal')}</option>
+          <option value="inline">${this.t('inline')}</option>
+        </select></label
+      >
       ${this.compactControls()} ${this.orderControls()} ${this.backgroundControl()}
       <p class="hint">${this.t('power_hint')}</p>
       <details>

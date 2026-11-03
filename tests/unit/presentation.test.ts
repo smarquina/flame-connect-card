@@ -849,7 +849,11 @@ it('clears discovery deadlines on disconnect', async () => {
 it('renders independent chip actions, effective colors and expansion without service calls', async () => {
   const hass = fakeHass();
   hass.callService = vi.fn().mockResolvedValue(undefined);
-  const element = await card(hass, { initial_view: 'compact', compact_style: 'chip' });
+  const element = await card(hass, {
+    initial_view: 'compact',
+    compact_style: 'chip',
+    chip_expansion: 'inline',
+  });
   expect(element.getCardSize()).toBe(2);
   expect(element.shadowRoot!.querySelector('[data-view="chip"]')).not.toBeNull();
   for (const [flame, heat, active] of [
@@ -883,7 +887,11 @@ it('renders independent chip actions, effective colors and expansion without ser
 it('chip controls send only their own actions and preserve pending readback on expansion', async () => {
   const hass = fakeHass();
   hass.callService = vi.fn().mockResolvedValue(undefined);
-  const element = await card(hass, { initial_view: 'compact', compact_style: 'chip' });
+  const element = await card(hass, {
+    initial_view: 'compact',
+    compact_style: 'chip',
+    chip_expansion: 'inline',
+  });
   button(element, 'Flame').click();
   await element.updateComplete;
   expect(hass.callService).toHaveBeenLastCalledWith(
@@ -918,6 +926,7 @@ it('chip honors hidden actions and falls back to a translated title', async () =
   const element = await card(hass, {
     initial_view: 'compact',
     compact_style: 'chip',
+    chip_expansion: 'inline',
     show_flame: false,
     show_heating: false,
     name: undefined,
@@ -932,4 +941,80 @@ it('editor saves the compact style preference', async () => {
   change(select(element, 'Compact style'), 'chip');
   await element.updateComplete;
   expect((changes.mock.lastCall![0] as CustomEvent).detail.config.compact_style).toBe('chip');
+});
+
+it('opens chip details in a native modal without expanding the dashboard and closes through controls', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  const element = await card(hass, { initial_view: 'compact', compact_style: 'chip' });
+  button(element, 'Expand controls').click();
+  await element.updateComplete;
+  await Promise.resolve();
+  const dialog = element.shadowRoot!.querySelector('dialog')!;
+  expect(dialog.open).toBe(true);
+  expect(element.getCardSize()).toBe(2);
+  expect(dialog.querySelector('[data-view="expanded"]')).not.toBeNull();
+  expect(element.shadowRoot!.querySelector('[data-view="chip"]')).not.toBeNull();
+  dialog.querySelector<HTMLButtonElement>('.view-toggle')!.click();
+  await element.updateComplete;
+  expect(dialog.open).toBe(false);
+  expect(hass.callService).not.toHaveBeenCalled();
+  button(element, 'Expand controls').click();
+  await element.updateComplete;
+  await Promise.resolve();
+  const cancel = new Event('cancel', { cancelable: true });
+  dialog.dispatchEvent(cancel);
+  await element.updateComplete;
+  expect(cancel.defaultPrevented).toBe(true);
+  expect(dialog.open).toBe(false);
+});
+it('ignores dialog interior clicks, closes on backdrop and cleans up on removal or reconfiguration', async () => {
+  const element = await card(fakeHass(), { initial_view: 'compact', compact_style: 'chip' });
+  const open = async () => {
+    button(element, 'Expand controls').click();
+    await element.updateComplete;
+    await Promise.resolve();
+  };
+  await open();
+  const dialog = element.shadowRoot!.querySelector('dialog')!;
+  dialog
+    .querySelector('h2')!
+    .dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 5, clientY: 5 }));
+  dialog.dispatchEvent(new MouseEvent('click', { clientX: 0, clientY: 0 }));
+  expect(dialog.open).toBe(true);
+  dialog.dispatchEvent(new MouseEvent('click', { clientX: 10, clientY: 10 }));
+  await element.updateComplete;
+  expect(dialog.open).toBe(false);
+  await open();
+  element.setConfig({ ...config, initial_view: 'compact', compact_style: 'chip' });
+  await element.updateComplete;
+  expect(dialog.open).toBe(false);
+  await open();
+  element.remove();
+  expect(dialog.open).toBe(false);
+});
+it('does not open a modal after a rapid second summary activation', async () => {
+  const element = await card(fakeHass(), { initial_view: 'compact', compact_style: 'chip' });
+  const summary = button(element, 'Expand controls');
+  summary.click();
+  summary.click();
+  await element.updateComplete;
+  await Promise.resolve();
+  expect(element.shadowRoot!.querySelector('dialog')!.open).toBe(false);
+});
+it('saves modal expansion preferences in the editor', async () => {
+  const element = await editor();
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  change(select(element, 'Chip expansion'), 'inline');
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.chip_expansion).toBe('inline');
+});
+
+it('chip uses native Home Assistant icons including fan-only ventilation', async () => {
+  const hass = fakeHass();
+  hass.states['climate.fire_heating']!.attributes.preset_mode = 'fan_only';
+  const element = await card(hass, { initial_view: 'compact', compact_style: 'chip' });
+  expect(element.shadowRoot!.querySelector('ha-icon[icon="mdi:fireplace"]')).not.toBeNull();
+  expect(element.shadowRoot!.querySelector('ha-icon[icon="mdi:fan"]')).not.toBeNull();
 });

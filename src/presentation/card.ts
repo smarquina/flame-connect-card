@@ -27,6 +27,11 @@ import { renderSlider } from './slider';
 import { effectPresentation } from './effect-state';
 import { renderChip, chipStyles } from './chip';
 import './editor';
+const CHIP_EFFECT_ICONS = {
+  flame: 'mdi:fire',
+  heating: 'mdi:radiator',
+  ventilation: 'mdi:fan',
+} as const;
 const EXPANDED_ROWS = 8;
 const COMPACT_BASE_ROWS = 3;
 const CHIP_ROWS = 2;
@@ -45,6 +50,7 @@ export class FlameConnectCard extends LitElement {
   private error: ErrorCode | '' = '';
   private generation = 0;
   private expanded = true;
+  private modalOpen = false;
 
   set hass(value: HomeAssistant) {
     this.currentHass = value;
@@ -54,6 +60,7 @@ export class FlameConnectCard extends LitElement {
   }
   setConfig(value: unknown): void {
     const config = parseConfig(value);
+    this.closeModal();
     this.generation++;
     this.controller?.dispose();
     this.config = config;
@@ -69,10 +76,12 @@ export class FlameConnectCard extends LitElement {
   }
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.closeModal();
     this.generation++;
     this.controller?.dispose();
   }
   getCardSize(): number {
+    if (this.modalOpen) return CHIP_ROWS;
     if (this.expanded) return EXPANDED_ROWS;
     const config = this.config!;
     if (config.compact_style === 'chip') return CHIP_ROWS;
@@ -173,9 +182,11 @@ export class FlameConnectCard extends LitElement {
       ${unknown ? icon('unavailable') : nothing}
     </div>`;
   }
-  private toggle(state: FireplaceState, kind: 'flame' | 'heating') {
+  private toggle(state: FireplaceState, kind: 'flame' | 'heating', chip = false) {
     const effect = effectPresentation(state, kind);
     const { value } = effect;
+    const chipIcon = value === null ? 'mdi:alert-circle-outline' : CHIP_EFFECT_ICONS[effect.label];
+    const glyph = chip ? html`<ha-icon icon=${chipIcon}></ha-icon>` : icon(effect.icon);
     const unavailable = value === null;
     const text = this.t(effect.label) + ' · ' + this.t(effect.status);
     const standby = kind === 'flame' && state.power === false && !value;
@@ -186,7 +197,7 @@ export class FlameConnectCard extends LitElement {
       ?disabled=${this.disabled || unavailable || standby || (kind === 'heating' && !state.climateAvailable)}
       @click=${() => this.run({ kind, value: !value })}
     >
-      ${icon(effect.icon)}
+      ${glyph}
     </button>`;
   }
   private targetControl(state: FireplaceState) {
@@ -291,6 +302,22 @@ export class FlameConnectCard extends LitElement {
     </div>`;
   }
   private async changeView(): Promise<void> {
+    if (this.modalOpen) {
+      this.closeModal();
+      return;
+    }
+    if (
+      !this.expanded &&
+      this.config!.compact_style === 'chip' &&
+      this.config!.chip_expansion === 'modal'
+    ) {
+      this.modalOpen = true;
+      this.expanded = true;
+      this.requestUpdate();
+      await this.updateComplete;
+      if (this.modalOpen) this.renderRoot.querySelector<HTMLDialogElement>('dialog')!.showModal();
+      return;
+    }
     this.expanded = !this.expanded;
     this.requestUpdate();
     if (this.config!.compact_style === 'chip') {
@@ -299,6 +326,26 @@ export class FlameConnectCard extends LitElement {
         .querySelector<HTMLButtonElement>(this.expanded ? '.view-toggle' : '.chip-summary')!
         .focus();
     }
+  }
+  private closeModal(): void {
+    if (!this.modalOpen) return;
+    this.modalOpen = false;
+    this.expanded = false;
+    this.renderRoot.querySelector<HTMLDialogElement>('dialog')!.close();
+    this.renderRoot.querySelector<HTMLButtonElement>('.chip-summary')!.focus();
+    this.requestUpdate();
+  }
+  private backdrop(event: MouseEvent): void {
+    const dialog = event.currentTarget as HTMLDialogElement;
+    const rect = dialog.getBoundingClientRect();
+    if (
+      event.target === dialog &&
+      (event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom)
+    )
+      this.closeModal();
   }
   private settings(state: FireplaceState, config: CardConfig) {
     const controls = config.control_order.filter(
@@ -323,11 +370,11 @@ export class FlameConnectCard extends LitElement {
   private chip(state: FireplaceState, config: CardConfig) {
     const name = state.name === 'Fireplace' ? this.t('title') : state.name;
     const actions = html`<div class="toggles" role="group" aria-label=${this.t('controls')}>
-      ${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame') : nothing}
-      ${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating') : nothing}
+      ${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame', true) : nothing}
+      ${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating', true) : nothing}
     </div>`;
     return html`<ha-card data-view="chip" aria-label=${name}>
-      ${renderChip(state, name, this.t(this.status(state)), this.t('expand'), () => this.changeView(), actions)}
+      ${renderChip(state, name, this.t(this.status(state)), this.t('expand'), () => this.changeView(), actions, config.chip_expansion === 'modal')}
       <div class="chip-feedback">${this.feedback()}</div>
     </ha-card>`;
   }
@@ -335,7 +382,23 @@ export class FlameConnectCard extends LitElement {
     const state = this.snapshot();
     const config = this.config;
     if (!state || !config) return nothing;
-    if (!this.expanded && config.compact_style === 'chip') return this.chip(state, config);
+    if (config.compact_style === 'chip' && (!this.expanded || this.modalOpen))
+      return html` ${this.chip(state, config)}
+        <dialog
+          aria-label=${this.t('details')}
+          @cancel=${(event: Event) => {
+            event.preventDefault();
+            this.closeModal();
+          }}
+          @click=${(event: MouseEvent) => this.backdrop(event)}
+        >
+          ${this.modalOpen ? this.details(state, config) : nothing}
+        </dialog>`;
+    return this.details(state, config);
+  }
+  private details(state: FireplaceState, config: CardConfig) {
+    const layoutAction = this.expanded ? 'collapse' : 'expand';
+    const viewAction = this.modalOpen ? 'close' : layoutAction;
     return html`<ha-card
       aria-label=${state.name}
       data-view=${this.expanded ? 'expanded' : 'compact'}
@@ -349,13 +412,13 @@ export class FlameConnectCard extends LitElement {
         <button
           class="view-toggle"
           type="button"
-          aria-label=${this.t(this.expanded ? 'collapse' : 'expand')}
-          title=${this.t(this.expanded ? 'collapse' : 'expand')}
+          aria-label=${this.t(viewAction)}
+          title=${this.t(viewAction)}
           aria-expanded=${String(this.expanded)}
           aria-controls="card-body"
           @click=${() => this.changeView()}
         >
-          ${icon(this.expanded ? 'collapse' : 'expand')}
+          ${icon(viewAction)}
         </button>
       </header>
       ${this.expanded || config.compact_image ? this.image(state, config) : nothing}

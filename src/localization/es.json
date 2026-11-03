@@ -92,5 +92,10 @@
   "refresh_discovery": "Actualizar chimeneas",
   "compact_style": "Estilo compacto",
   "standard": "Estándar",
-  "chip": "Chip"
+  "chip": "Chip",
+  "chip_expansion": "Expansión del chip",
+  "modal": "Ventana modal",
+  "inline": "En el panel",
+  "close": "Cerrar controles",
+  "details": "Controles de la chimenea"
 }

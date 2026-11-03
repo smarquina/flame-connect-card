@@ -186,3 +186,11 @@ it('validates the optional compact chip style', () => {
       }),
     ).toThrow('compact_style');
 });
+
+it('defaults chip expansion to modal and validates inline opt-in', () => {
+  const base = { type: 'custom:flame-connect-card', entities: { flame: 'light.fire' } };
+  expect(parseConfig(base).chip_expansion).toBe('modal');
+  expect(parseConfig({ ...base, chip_expansion: 'inline' }).chip_expansion).toBe('inline');
+  for (const chip_expansion of [null, 'invalid', 3, {}])
+    expect(() => parseConfig({ ...base, chip_expansion })).toThrow('chip_expansion');
+});

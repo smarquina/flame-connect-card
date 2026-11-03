@@ -92,5 +92,10 @@
   "refresh_discovery": "Refresh fireplaces",
   "compact_style": "Compact style",
   "standard": "Standard",
-  "chip": "Chip"
+  "chip": "Chip",
+  "chip_expansion": "Chip expansion",
+  "modal": "Dialog",
+  "inline": "In dashboard",
+  "close": "Close controls",
+  "details": "Fireplace controls"
 }
