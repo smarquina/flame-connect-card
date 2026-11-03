@@ -1,23 +1,8 @@
-import type { Bindings, EntityRole } from '../../domain/model';
+import type { Bindings } from '../../domain/model';
 import type { HomeAssistant, RegistryEntry } from './types';
 
-type DiscoveredRole = Exclude<EntityRole, 'ambient'>;
-const SUFFIXES: Record<DiscoveredRole, string> = {
-  power: '_power',
-  flame: '_flame',
-  climate: '_heating',
-  color: '_color',
-  brightness: '_brightness',
-  speed: '_speed',
-};
-const DOMAINS: Record<DiscoveredRole, string> = {
-  power: 'switch.',
-  flame: 'light.',
-  climate: 'climate.',
-  color: 'select.',
-  brightness: 'select.',
-  speed: 'number.',
-};
+import { ENTITY_CONTRACTS, ENTITY_ROLES } from '../../configuration/entity-contracts';
+
 export interface DiscoveredFireplace {
   id: string;
   name: string;
@@ -29,9 +14,14 @@ export async function discover(hass: HomeAssistant): Promise<DiscoveredFireplace
   const devices = new Map<string, DiscoveredFireplace>();
   for (const entry of entries) {
     if (entry.platform !== 'flame_connect' || !entry.device_id || entry.disabled_by) continue;
-    const role = (Object.keys(SUFFIXES) as DiscoveredRole[]).find(
-      (key) => entry.unique_id.endsWith(SUFFIXES[key]) && entry.entity_id.startsWith(DOMAINS[key]),
-    );
+    const role = ENTITY_ROLES.find((key) => {
+      const { suffix, domain } = ENTITY_CONTRACTS[key];
+      return (
+        suffix !== null &&
+        entry.unique_id.endsWith(suffix) &&
+        entry.entity_id.startsWith(domain + '.')
+      );
+    });
     if (!role) continue;
     const device = devices.get(entry.device_id) ?? {
       id: entry.device_id,

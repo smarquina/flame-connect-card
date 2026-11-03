@@ -20,4 +20,8 @@ If flame speed is missing, check that the model exposes its Flame speed Number e
 
 If a control is missing only in compact view, select it under **Controls in compact view**. Its entity binding and global visibility must also be enabled. Expanding intentionally does not restore controls hidden under **Visible elements**. Each card keeps its own expansion state; a reload returns to its configured initial view.
 
+If automatic discovery failed temporarily, use **Refresh fireplaces** in the visual editor. A successful retry clears the discovery warning. The editor does not retry continuously in the background. Manual entity selection remains available.
+
+If a slider becomes unavailable despite a numeric entity value, check its minimum, maximum and step. Incoming off-step or out-of-range values are intentionally rejected.
+
 Report card version, backend version, HA version, browser, fireplace model and the affected entity domains. Include a minimal redacted card configuration only when needed. Do not post credentials, JWTs, native callback URLs or full HA state exports.

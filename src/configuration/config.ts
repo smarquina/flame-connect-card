@@ -9,15 +9,8 @@ import {
   type EntityRole,
 } from '../domain/model';
 
-const DOMAINS: Record<EntityRole, string> = {
-  power: 'switch',
-  flame: 'light',
-  climate: 'climate',
-  color: 'select',
-  brightness: 'select',
-  speed: 'number',
-  ambient: 'sensor',
-};
+import { ENTITY_CONTRACTS } from './entity-contracts';
+
 const RECORD = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -36,10 +29,13 @@ function parseEntities(value: unknown): CardConfig['entities'] {
   if (!RECORD(value)) throw new Error('entities: select a flame or climate entity');
   const entities: CardConfig['entities'] = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (!Object.hasOwn(DOMAINS, key)) throw new Error(`entities.${key}: unsupported role`);
+    if (!Object.hasOwn(ENTITY_CONTRACTS, key)) throw new Error(`entities.${key}: unsupported role`);
     const role = key as EntityRole;
-    if (typeof entry !== 'string' || !new RegExp(`^${DOMAINS[role]}\\.[a-z0-9_]+$`).test(entry))
-      throw new Error(`entities.${key}: expected a ${DOMAINS[role]} entity`);
+    if (
+      typeof entry !== 'string' ||
+      !new RegExp(`^${ENTITY_CONTRACTS[role].domain}\\.[a-z0-9_]+$`).test(entry)
+    )
+      throw new Error(`entities.${key}: expected a ${ENTITY_CONTRACTS[role].domain} entity`);
     entities[role] = entry;
   }
   if (!entities.flame && !entities.climate)

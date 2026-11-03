@@ -8,6 +8,30 @@ import {
   type VisualState,
 } from './model';
 
+export function validNumericValue(
+  value: number,
+  minimum: number,
+  maximum: number,
+  step: number,
+): boolean {
+  const steps = (value - minimum) / step;
+  return (
+    Number.isFinite(value) &&
+    Number.isFinite(minimum) &&
+    Number.isFinite(maximum) &&
+    Number.isFinite(step) &&
+    step > 0 &&
+    minimum <= maximum &&
+    value >= minimum &&
+    value <= maximum &&
+    Math.abs(steps - Math.round(steps)) <= NUMERIC_STEP_TOLERANCE
+  );
+}
+
+export function effectiveEffect(state: FireplaceState, kind: 'flame' | 'heating'): boolean | null {
+  return state.power === false ? false : state[kind];
+}
+
 export function visualState(state: FireplaceState): VisualState {
   if (state.power === false) return 'off';
   if (state.flame === null || state.heating === null) return 'unknown';
@@ -29,27 +53,14 @@ function validateTemperature(state: FireplaceState, value: number): void {
     state.step === null
   )
     throw new ControlError('unavailable');
-  const steps = (value - state.minimum) / state.step;
-  if (
-    !Number.isFinite(value) ||
-    value < state.minimum ||
-    value > state.maximum ||
-    Math.abs(steps - Math.round(steps)) > NUMERIC_STEP_TOLERANCE
-  )
+  if (!validNumericValue(value, state.minimum, state.maximum, state.step))
     throw new ControlError('invalid_value');
 }
 
 function validateSpeed(state: FireplaceState, value: number): void {
   if (!state.speed) throw new ControlError('unavailable');
   const { minimum, maximum, step } = state.speed;
-  if (
-    !Number.isFinite(value) ||
-    value < minimum ||
-    value > maximum ||
-    Math.abs((value - minimum) / step - Math.round((value - minimum) / step)) >
-      NUMERIC_STEP_TOLERANCE
-  )
-    throw new ControlError('invalid_value');
+  if (!validNumericValue(value, minimum, maximum, step)) throw new ControlError('invalid_value');
 }
 
 function validateEffect(state: FireplaceState, kind: 'power' | 'flame', value: boolean): void {
@@ -99,6 +110,9 @@ export function isConfirmed(state: FireplaceState, command: Command): boolean {
     case 'color':
     case 'brightness':
       return state[command.kind].available && state[command.kind].value === command.value;
+    case 'flame':
+    case 'heating':
+      return effectiveEffect(state, command.kind) === command.value;
     default:
       return state[command.kind] === command.value;
   }

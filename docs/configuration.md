@@ -84,7 +84,7 @@ Visibility options do not remove entity bindings, alter the fireplace state or s
 | `color`      | `select`  | Optional model-specific flame palette                                 |
 | `brightness` | `select`  | Optional flame brightness/effect options                              |
 
-At least `flame` or `climate` must be configured. Automatic discovery groups enabled `flame_connect` registry entries by device and recognizes the backend's stable unique-ID suffixes. It does not infer controls from translated display names. A permission failure leaves manual entity selection available. Switching the discovered fireplace replaces its control bindings and retains the separately selected room sensor.
+At least `flame` or `climate` must be configured. Automatic discovery groups enabled `flame_connect` registry entries by device and recognizes the backend's stable unique-ID suffixes. It does not infer controls from translated display names. A permission failure leaves manual entity selection available. Use **Refresh fireplaces** (**Actualizar chimeneas**) to retry a failed query or refresh available devices. Only one discovery request runs at a time; responses from an editor instance that has disconnected are ignored. Refreshing does not send fireplace commands. Switching the discovered fireplace replaces its control bindings and retains the separately selected room sensor.
 
 Disabled or nonexistent entities cannot be controlled. Color entities usually require enabling experimental controls in Flame Connect HA and then enabling the individual entity on its device page. Do not confuse the climate target with the legacy unavailable reported-temperature sensor.
 

@@ -278,3 +278,25 @@ describe('flame speed entity contract', () => {
     expect((await discover(hass))[0]!.entities.speed).toBe('number.fire_speed');
   });
 });
+
+it.each([100, 22.2, -10])(
+  'does not expose an invalid confirmed target %s to a native slider',
+  (temperature) => {
+    const hass = fakeHass();
+    hass.states['climate.fire_heating']!.attributes.temperature = temperature;
+    expect(mapState(config, hass).target).toBeNull();
+  },
+);
+it('does not expose an off-step flame speed as a confirmed slider value', () => {
+  const hass = fakeHass();
+  hass.states['number.fire_speed']!.state = '2.5';
+  expect(
+    mapState({ ...config, entities: { ...config.entities, speed: 'number.fire_speed' } }, hass)
+      .speed,
+  ).toBeNull();
+  hass.states['number.fire_speed']!.attributes.step = 0.5;
+  expect(
+    mapState({ ...config, entities: { ...config.entities, speed: 'number.fire_speed' } }, hass)
+      .speed?.value,
+  ).toBe(2.5);
+});

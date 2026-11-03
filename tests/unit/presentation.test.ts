@@ -697,3 +697,105 @@ it('saves and removes compact controls in the visual editor', async () => {
   await element.updateComplete;
   expect((changes.mock.lastCall![0] as CustomEvent).detail.config.compact_controls).toEqual([]);
 });
+
+it('sizes compact cards from visible mapped details and the optional thumbnail', async () => {
+  const element = await card(fakeHass(), {
+    initial_view: 'compact',
+    compact_controls: ['target', 'ambient', 'speed'],
+    show_target: false,
+  });
+  expect(element.getCardSize()).toBe(5);
+  element.setConfig({
+    ...config,
+    initial_view: 'compact',
+    compact_controls: [],
+    compact_image: true,
+  });
+  await element.updateComplete;
+  expect(element.getCardSize()).toBe(5);
+  element.setConfig({
+    ...config,
+    initial_view: 'compact',
+    compact_controls: [],
+    compact_image: true,
+    show_image: false,
+  });
+  await element.updateComplete;
+  expect(element.getCardSize()).toBe(3);
+});
+it('keeps standby indicators and action buttons consistent when effect flags are retained', async () => {
+  const hass = fakeHass();
+  hass.states['switch.fire_power']!.state = 'off';
+  const element = await card(hass);
+  expect(
+    element.shadowRoot!.querySelector('[data-status="flame"]')!.getAttribute('data-state'),
+  ).toBe('off');
+  expect(button(element, 'Flame · Off').getAttribute('aria-pressed')).toBe('false');
+  expect(button(element, 'Heating · Off').getAttribute('aria-pressed')).toBe('false');
+});
+it('allows explicit discovery retry after failure without issuing device commands', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  hass.callWS = vi.fn().mockRejectedValueOnce(new Error('Offline')).mockResolvedValue([]);
+  const element = await editor(hass);
+  await vi.waitFor(() => expect(text(element)).toContain('Automatic discovery is unavailable'));
+  button(element, 'Refresh fireplaces').click();
+  await vi.waitFor(() => expect(hass.callWS).toHaveBeenCalledTimes(2));
+  await element.updateComplete;
+  await Promise.resolve();
+  await element.updateComplete;
+  expect(text(element)).not.toContain('Automatic discovery is unavailable');
+  expect(hass.callService).not.toHaveBeenCalled();
+});
+it.each(['resolve', 'reject'] as const)(
+  'ignores stale discovery %s after disconnection and recovers with a fresh request',
+  async (outcome) => {
+    let resolveOld!: (value: RegistryEntry[]) => void;
+    let rejectOld!: (value: Error) => void;
+    const hass = fakeHass();
+    hass.callWS = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            resolveOld = resolve;
+            rejectOld = reject;
+          }),
+      )
+      .mockResolvedValue([]);
+    const element = await editor(hass);
+    const refresh = button(element, 'Refresh fireplaces');
+    expect(refresh.disabled).toBe(true);
+    refresh.dispatchEvent(new Event('click'));
+    await Promise.resolve();
+    expect(hass.callWS).toHaveBeenCalledTimes(1);
+    element.remove();
+    document.body.append(element);
+    element.hass = hass;
+    await vi.waitFor(() => expect(hass.callWS).toHaveBeenCalledTimes(2));
+    if (outcome === 'resolve')
+      resolveOld([
+        {
+          entity_id: 'light.stale',
+          unique_id: 'stale_flame',
+          platform: 'flame_connect',
+          device_id: 'stale',
+          disabled_by: null,
+        },
+      ]);
+    else rejectOld(new Error('Late failure'));
+    await Promise.resolve();
+    await Promise.resolve();
+    await element.updateComplete;
+    expect(text(element)).not.toContain('stale');
+    expect(text(element)).not.toContain('Automatic discovery is unavailable');
+  },
+);
+it('ignores refresh events before an editor has Home Assistant context', async () => {
+  const element = document.createElement('flame-connect-card-editor') as FlameConnectCardEditor;
+  document.body.append(element);
+  await element.updateComplete;
+  button(element, 'Refresh fireplaces').dispatchEvent(new Event('click'));
+  await element.updateComplete;
+  expect(button(element, 'Refresh fireplaces').disabled).toBe(true);
+});

@@ -20,7 +20,9 @@ const paths = {
   unavailable: 'M12 3L2 21h20z M12 9v5 M12 17h.01',
 } as const;
 
-export function icon(name: keyof typeof paths) {
+export type IconName = keyof typeof paths;
+
+export function icon(name: IconName) {
   return html`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     ${svg`<path d=${paths[name]} />`}
   </svg>`;

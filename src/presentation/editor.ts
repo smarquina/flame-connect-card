@@ -14,15 +14,8 @@ import type { HomeAssistant } from '../adapters/home-assistant/types';
 import { localize } from '../localization/localize';
 import { sharedStyles } from './styles';
 
-const ROLES: Record<EntityRole, string> = {
-  climate: 'climate.',
-  flame: 'light.',
-  power: 'switch.',
-  ambient: 'sensor.',
-  color: 'select.',
-  brightness: 'select.',
-  speed: 'number.',
-};
+import { ENTITY_CONTRACTS, ENTITY_ROLES } from '../configuration/entity-contracts';
+
 export class FlameConnectCardEditor extends LitElement {
   static readonly styles = [
     sharedStyles,
@@ -69,24 +62,34 @@ export class FlameConnectCardEditor extends LitElement {
     entities: {},
   };
   private fireplaces: DiscoveredFireplace[] = [];
-  private discoveryStarted = false;
-  private discoveryFailed = false;
+  private discoveryState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  private discoveryGeneration = 0;
   private error = '';
   set hass(value: HomeAssistant) {
     this.currentHass = value;
-    if (!this.discoveryStarted) {
-      this.discoveryStarted = true;
-      void discover(value)
-        .then((devices) => {
-          this.fireplaces = devices;
-          this.requestUpdate();
-        })
-        .catch(() => {
-          this.discoveryFailed = true;
-          this.requestUpdate();
-        });
-    }
+    if (this.discoveryState === 'idle') void this.refreshDiscovery();
     this.requestUpdate();
+  }
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.discoveryGeneration++;
+    this.discoveryState = 'idle';
+  }
+  private async refreshDiscovery(): Promise<void> {
+    if (!this.currentHass || this.discoveryState === 'loading') return;
+    const generation = ++this.discoveryGeneration;
+    this.discoveryState = 'loading';
+    this.requestUpdate();
+    try {
+      const devices = await discover(this.currentHass);
+      if (generation !== this.discoveryGeneration) return;
+      this.fireplaces = devices;
+      this.discoveryState = 'ready';
+    } catch {
+      if (generation === this.discoveryGeneration) this.discoveryState = 'error';
+    } finally {
+      if (generation === this.discoveryGeneration) this.requestUpdate();
+    }
   }
   setConfig(value: unknown): void {
     if (value && typeof value === 'object' && !Array.isArray(value))
@@ -134,7 +137,7 @@ export class FlameConnectCardEditor extends LitElement {
   private options(role: EntityRole): string[] {
     return Object.keys(this.currentHass?.states ?? {})
       .filter((entity) => {
-        if (!entity.startsWith(ROLES[role])) return false;
+        if (!entity.startsWith(ENTITY_CONTRACTS[role].domain + '.')) return false;
         return (
           role !== 'ambient' ||
           this.currentHass?.states[entity]?.attributes.device_class === 'temperature'
@@ -259,6 +262,7 @@ export class FlameConnectCardEditor extends LitElement {
   }
   protected render() {
     const bindings = this.bindings();
+    const options = new Map(ENTITY_ROLES.map((role) => [role, this.options(role)]));
     const images = this.config.images as CardConfig['images'] | undefined;
     return html`<div class="editor">
       <p class="hint">${this.t('editor_description')}</p>
@@ -271,7 +275,14 @@ export class FlameConnectCardEditor extends LitElement {
           ${this.fireplaces.map((device) => html`<option value=${device.id}>${device.name}</option>`)}
         </select></label
       >
-      ${this.discoveryFailed ? html`<p class="hint" role="status">${this.t('discovery_failed')}</p>` : nothing}
+      <button
+        type="button"
+        ?disabled=${!this.currentHass || this.discoveryState === 'loading'}
+        @click=${() => this.refreshDiscovery()}
+      >
+        ${this.t('refresh_discovery')}
+      </button>
+      ${this.discoveryState === 'error' ? html`<p class="hint" role="status">${this.t('discovery_failed')}</p>` : nothing}
       <label
         >${this.t('name')}<input
           aria-label=${this.t('name')}
@@ -285,17 +296,17 @@ export class FlameConnectCardEditor extends LitElement {
           }}
       /></label>
       <div class="entities">
-        ${(Object.keys(ROLES) as EntityRole[]).map(
+        ${ENTITY_ROLES.map(
           (role) =>
             html` <label
-              >${this.t(role === 'climate' ? 'heating' : role)}<select
-                aria-label=${this.t(role === 'climate' ? 'heating' : role)}
+              >${this.t(ENTITY_CONTRACTS[role].label)}<select
+                aria-label=${this.t(ENTITY_CONTRACTS[role].label)}
                 .value=${bindings[role] ?? ''}
                 @change=${(event: Event) => this.entity(role, event)}
               >
                 <option value="">—</option>
-                ${bindings[role] && !this.options(role).includes(bindings[role]!) ? html`<option value=${bindings[role]!} selected>${bindings[role]} (${this.t('not_available')})</option>` : nothing}
-                ${this.options(role).map((entity) => html`<option value=${entity} ?selected=${bindings[role] === entity}>${this.currentHass?.states[entity]?.attributes.friendly_name ?? entity} (${entity})</option>`)}
+                ${bindings[role] && !options.get(role)!.includes(bindings[role]!) ? html`<option value=${bindings[role]!} selected>${bindings[role]} (${this.t('not_available')})</option>` : nothing}
+                ${options.get(role)!.map((entity) => html`<option value=${entity} ?selected=${bindings[role] === entity}>${this.currentHass?.states[entity]?.attributes.friendly_name ?? entity} (${entity})</option>`)}
               </select></label
             >`,
         )}

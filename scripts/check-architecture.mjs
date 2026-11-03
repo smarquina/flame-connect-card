@@ -1,24 +1,53 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import ts from 'typescript';
+
+const CORE_ROOTS = ['src/domain', 'src/application'];
+const BROWSER_GLOBALS = new Set(['window', 'document', 'localStorage', 'fetch']);
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)],
   );
 }
-for (const directory of ['src/domain', 'src/application']) {
+function checkDependency(file, directory, dependency) {
+  const target = relative(resolve('src'), resolve(dirname(file), dependency)).replaceAll('\\', '/');
+  const allowed =
+    target.startsWith('domain/') ||
+    (directory.endsWith('application') && target.startsWith('application/'));
+  if (!dependency.startsWith('.') || !allowed)
+    throw new Error(`${file}: forbidden inward dependency ${dependency}`);
+}
+function moduleArgument(node) {
+  if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return node.moduleSpecifier;
+  if (ts.isImportTypeNode(node)) return node.argument.literal;
+  if (
+    ts.isCallExpression(node) &&
+    (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+      (ts.isIdentifier(node.expression) && node.expression.text === 'require'))
+  )
+    return node.arguments[0];
+  return undefined;
+}
+for (const directory of CORE_ROOTS) {
   for (const file of files(directory)) {
-    const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/(?:from\s+|import\s*)['"]([^'"]+)['"]/g)) {
-      const dependency = match[1];
-      if (
-        !dependency.startsWith('.') ||
-        /adapters|presentation|composition|configuration|localization/.test(dependency) ||
-        (directory.endsWith('domain') && dependency.includes('application'))
-      )
-        throw new Error(`${relative('.', file)}: forbidden inward dependency ${dependency}`);
+    const source = ts.createSourceFile(
+      file,
+      readFileSync(file, 'utf8'),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    function visit(node) {
+      const argument = moduleArgument(node);
+      if (argument) {
+        if (!ts.isStringLiteralLike(argument))
+          throw new Error(`${file}: forbidden inward dependency: nonliteral module`);
+        checkDependency(file, directory, argument.text);
+      }
+      if (ts.isIdentifier(node) && BROWSER_GLOBALS.has(node.text))
+        throw new Error(`${file}: browser dependency in core`);
+      ts.forEachChild(node, visit);
     }
-    if (/\b(?:window|document|localStorage|fetch)\b/.test(source))
-      throw new Error(`${file}: browser dependency in core`);
+    visit(source);
   }
 }
 console.log('Architecture boundaries verified.');

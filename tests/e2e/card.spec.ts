@@ -526,3 +526,38 @@ test('editor configures compact selection without commands and card instances ex
   await expect(second.locator('ha-card')).toHaveAttribute('data-view', 'expanded');
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
 });
+
+test('visual editor can retry registry discovery after a transient failure', async ({ page }) => {
+  await page.evaluate(() => {
+    const ctor = customElements.get('flame-connect-card') as unknown as {
+      getConfigElement(): HTMLElement;
+    };
+    const editor = ctor.getConfigElement() as HTMLElement & {
+      hass: typeof window.demo.hass;
+      setConfig(config: unknown): void;
+    };
+    window.demo.hass.callWS = async () => {
+      throw new Error('Temporary registry failure');
+    };
+    editor.setConfig({
+      type: 'custom:flame-connect-card',
+      entities: { flame: 'light.fire_flame' },
+    });
+    editor.hass = window.demo.hass;
+    document.body.append(editor);
+  });
+  const editor = page.locator('flame-connect-card-editor');
+  await expect(editor.getByRole('status')).toContainText('Automatic discovery is unavailable');
+  await page.evaluate(() => {
+    window.demo.hass.callWS = async <T>() => [] as T;
+  });
+  await editor.getByRole('button', { name: 'Refresh fireplaces', exact: true }).click();
+  await expect(editor.getByRole('status')).toHaveCount(0);
+  await expect(
+    editor.getByRole('button', { name: 'Refresh fireplaces', exact: true }),
+  ).toBeEnabled();
+  await expect(editor.getByRole('combobox', { name: 'Flame', exact: true })).toHaveValue(
+    'light.fire_flame',
+  );
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
+});

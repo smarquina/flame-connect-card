@@ -1,4 +1,4 @@
-import { LitElement, css, html, nothing } from 'lit';
+import { LitElement, html, nothing } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
 import scene from '../assets/fireplaces.png?inline';
 import { parseConfig } from '../configuration/config';
@@ -18,239 +18,26 @@ import type { HomeAssistant } from '../adapters/home-assistant/types';
 import { localize, numberText } from '../localization/localize';
 import { composeController } from '../composition';
 import type { FireplaceController } from '../application/controller';
+import { visibleControl } from '../domain/controls';
+import { cardStyles } from './card-styles';
 import { sharedStyles } from './styles';
 import { icon } from './icons';
+import { renderSlider } from './slider';
+import { effectPresentation } from './effect-state';
 import './editor';
+const EXPANDED_ROWS = 8;
+const COMPACT_BASE_ROWS = 3;
+const DETAIL_ROWS = 2;
+const THUMBNAIL_ROWS = 2;
+const DEFAULT_SCENE_IMAGE = 'url(' + JSON.stringify(scene) + ')';
 
 export class FlameConnectCard extends LitElement {
   static readonly properties = { preview: { type: Boolean } };
-  static readonly styles = [
-    sharedStyles,
-    css`
-      ha-card {
-        display: block;
-        overflow: hidden;
-        border: 1px solid var(--ha-card-border-color, var(--divider-color, #ddd));
-        border-radius: var(--ha-card-border-radius, 16px);
-        background: var(--ha-card-background, var(--card-background-color, #fff));
-      }
-      header {
-        padding: 18px 20px 12px;
-        display: flex;
-        gap: 12px;
-        justify-content: space-between;
-        align-items: center;
-      }
-      h2 {
-        font-size: 1.15rem;
-        margin: 0 0 4px;
-        font-weight: 600;
-      }
-      .status-icons {
-        display: flex;
-        gap: 8px;
-        color: var(--secondary-text-color, #555);
-      }
-      .status-icons [data-state='on'] {
-        color: var(--primary-color, #007a91);
-      }
-      .status-icons [data-state='unknown'] {
-        color: var(--error-color, #a72020);
-      }
-      .view-toggle {
-        display: grid;
-        place-items: center;
-        min-width: 44px;
-      }
-      ha-card[data-view='compact'] .body {
-        padding-top: 8px;
-        gap: 12px;
-      }
-      ha-card[data-view='compact'] .scene {
-        width: min(100%, 220px);
-        margin-inline: auto;
-      }
-      .scene {
-        aspect-ratio: 2.05;
-        background-color: #000;
-        background-size: 200% 200%;
-        background-repeat: no-repeat;
-      }
-      .scene.unknown {
-        background-image: none !important;
-        display: grid;
-        place-items: center;
-        color: #ddd;
-      }
-      .body {
-        display: grid;
-        gap: 18px;
-        padding: 18px 20px;
-      }
-      .toggles:empty,
-      .settings:empty {
-        display: none;
-      }
-      .toggles {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .toggles button {
-        width: 56px;
-        height: 56px;
-        display: grid;
-        place-items: center;
-        padding: 0;
-        border: none;
-        border-radius: 16px;
-        background: var(--secondary-background-color, #f2f2f2);
-      }
-      .toggles button[aria-pressed='true'] {
-        color: var(--primary-color, #007a91);
-        box-shadow: inset 0 0 0 2px currentColor;
-      }
-      svg {
-        width: 24px;
-        height: 24px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.8;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        flex-shrink: 0;
-      }
-      .control-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .feedback {
-        display: flex;
-        justify-content: center;
-      }
-      .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip-path: inset(50%);
-        white-space: nowrap;
-        border: 0;
-      }
-      .settings {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 14px;
-        align-items: center;
-      }
-      .settings > div {
-        min-width: 0;
-      }
-      .reading-label {
-        display: inline-flex;
-        color: var(--secondary-text-color, #555);
-      }
-      .reading {
-        font-size: 1.7rem;
-        font-weight: 600;
-        margin-top: 6px;
-      }
-      .settings > [data-control='target'],
-      .settings > [data-control='speed'] {
-        grid-column: 1 / -1;
-      }
-      .slider-row {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 12px;
-        border: 1px solid var(--divider-color, #ddd);
-        border-radius: 18px;
-      }
-      .slider-label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
-      }
-      .slider-label > svg {
-        box-sizing: content-box;
-        padding: 10px;
-        border-radius: 50%;
-        background: var(--secondary-background-color, #f2f2f2);
-      }
-      .slider-value {
-        font-size: 1.1rem;
-        font-weight: 600;
-        white-space: nowrap;
-      }
-      input[type='range'] {
-        appearance: none;
-        -webkit-appearance: none;
-        min-width: 0;
-        width: 100%;
-        height: 48px;
-        min-height: 48px;
-        margin: 0;
-        padding: 0 9px;
-        border: 0;
-        border-radius: 16px;
-        background: linear-gradient(
-          to right,
-          var(--state-climate-heat-color, #ffab56) var(--fill),
-          var(--secondary-background-color, #eee) var(--fill)
-        );
-        cursor: pointer;
-      }
-      input[type='range']:disabled {
-        cursor: default;
-      }
-      input[type='range']::-webkit-slider-runnable-track {
-        height: 28px;
-        background: transparent;
-      }
-      input[type='range']::-webkit-slider-thumb {
-        appearance: none;
-        -webkit-appearance: none;
-        width: 5px;
-        height: 28px;
-        border: 0;
-        border-radius: 4px;
-        background: #fff;
-        box-shadow: 0 0 0 1px #888;
-      }
-      input[type='range']::-moz-range-track {
-        height: 28px;
-        background: transparent;
-      }
-      input[type='range']::-moz-range-thumb {
-        width: 5px;
-        height: 28px;
-        border: 0;
-        border-radius: 4px;
-        background: #fff;
-        box-shadow: 0 0 0 1px #888;
-      }
-      @media (max-width: 360px) {
-        header {
-          padding: 14px;
-        }
-        .body {
-          padding: 14px;
-        }
-        .settings {
-          grid-template-columns: 1fr;
-        }
-      }
-    `,
-  ];
+  static readonly styles = [sharedStyles, cardStyles];
   preview = false;
   private config?: CardConfig;
   private currentHass?: HomeAssistant;
+  private mappedState?: FireplaceState;
   private controller?: FireplaceController;
   private error = '';
   private generation = 0;
@@ -258,7 +45,8 @@ export class FlameConnectCard extends LitElement {
 
   set hass(value: HomeAssistant) {
     this.currentHass = value;
-    if (this.config) this.controller?.update(mapState(this.config, value));
+    this.mappedState = this.config ? mapState(this.config, value) : undefined;
+    if (this.mappedState) this.controller?.update(this.mappedState);
     this.requestUpdate();
   }
   setConfig(value: unknown): void {
@@ -266,6 +54,7 @@ export class FlameConnectCard extends LitElement {
     this.generation++;
     this.controller?.dispose();
     this.config = config;
+    this.mappedState = this.currentHass ? mapState(config, this.currentHass) : undefined;
     this.expanded = config.initial_view === 'expanded';
     this.error = '';
     this.controller = composeController(
@@ -281,8 +70,11 @@ export class FlameConnectCard extends LitElement {
     this.controller?.dispose();
   }
   getCardSize(): number {
-    if (this.expanded) return 8;
-    return 3 + this.config!.compact_controls.length * 2;
+    if (this.expanded) return EXPANDED_ROWS;
+    const config = this.config!;
+    const details = config.compact_controls.filter((kind) => visibleControl(config, kind)).length;
+    const thumbnail = config.compact_image && config.show_image ? THUMBNAIL_ROWS : 0;
+    return COMPACT_BASE_ROWS + details * DETAIL_ROWS + thumbnail;
   }
   getGridOptions() {
     return { columns: 12, rows: 'auto', min_columns: 6 };
@@ -293,8 +85,11 @@ export class FlameConnectCard extends LitElement {
   static getStubConfig() {
     return { type: CARD_TYPE, entities: {} };
   }
+  private get language(): string {
+    return this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en';
+  }
   private t(key: string): string {
-    return localize(this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en', key);
+    return localize(this.language, key);
   }
   private get disabled(): boolean {
     return this.preview || this.controller?.busy === true;
@@ -324,7 +119,7 @@ export class FlameConnectCard extends LitElement {
     input.value = confirmed ?? '';
   }
   private snapshot(): FireplaceState | undefined {
-    return this.config && this.currentHass ? mapState(this.config, this.currentHass) : undefined;
+    return this.mappedState;
   }
   private selectControl(state: FireplaceState, kind: 'mode' | 'color' | 'brightness') {
     const options = kind === 'mode' ? visibleModes(state) : state[kind].options;
@@ -363,7 +158,7 @@ export class FlameConnectCard extends LitElement {
       unknown: '0% 0%',
     };
     const label = this.t(this.status(state)) + '. ' + this.t('image_hint');
-    const image = 'url(' + JSON.stringify(customImage ?? scene) + ')';
+    const image = customImage ? 'url(' + JSON.stringify(customImage) + ')' : DEFAULT_SCENE_IMAGE;
     const unknown = visual === 'unknown';
     return html`<div
       class="scene ${unknown ? 'unknown' : ''}"
@@ -375,24 +170,20 @@ export class FlameConnectCard extends LitElement {
     </div>`;
   }
   private toggle(state: FireplaceState, kind: 'flame' | 'heating') {
-    const value = state[kind];
+    const effect = effectPresentation(state, kind);
+    const { value } = effect;
     const unavailable = value === null;
-    const status = value ? 'on' : 'off';
-    const label = kind === 'heating' && state.mode === 'fan_only' ? 'ventilation' : kind;
+    const text = this.t(effect.label) + ' · ' + this.t(effect.status);
     const standby = kind === 'flame' && state.power === false && !value;
     return html`<button
-      aria-label=${this.t(label) + ' · ' + this.t(unavailable ? 'not_available' : status)}
-      title=${this.t(label) + ' · ' + this.t(unavailable ? 'not_available' : status)}
+      aria-label=${text}
+      title=${text}
       aria-pressed=${String(value === true)}
       ?disabled=${this.disabled || unavailable || standby}
       @click=${() => this.run({ kind, value: !value })}
     >
-      ${icon(label === 'ventilation' ? 'mode' : kind)}
+      ${icon(effect.icon)}
     </button>`;
-  }
-  private sliderFill(value: number, minimum: number, maximum: number): string {
-    const fraction = maximum > minimum ? (value - minimum) / (maximum - minimum) : 0;
-    return `${Math.max(0, Math.min(1, fraction)) * 100}%`;
   }
   private targetControl(state: FireplaceState) {
     return this.sliderControl(
@@ -422,53 +213,25 @@ export class FlameConnectCard extends LitElement {
     step: number | null,
     unit: string,
   ) {
-    const enabled =
-      confirmed !== null && lower !== null && upper !== null && step !== null && upper > lower;
-    const minimum = lower ?? 0;
-    const maximum = upper ?? minimum;
-    const value = confirmed ?? minimum;
-    const fill = this.sliderFill(value, minimum, maximum);
-    const language = this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en';
-    const format = (number: number) => numberText(language, number) + (unit ? ' ' + unit : '');
-    const reading = confirmed === null ? '—' : format(confirmed);
-    return html`<div class="slider-row">
-      <label class="slider-label" for=${kind} title=${this.t(kind)}>
-        ${icon(kind)}<span class="sr-only">${this.t(kind)}</span>
-        <span class="slider-value ${kind}-value">${reading}</span>
-      </label>
-      <input
-        id=${kind}
-        type="range"
-        aria-label=${this.t(kind)}
-        aria-valuetext=${reading}
-        .value=${String(value)}
-        min=${minimum}
-        max=${maximum}
-        step=${step ?? 1}
-        style=${styleMap({ '--fill': fill })}
-        ?disabled=${this.disabled || !enabled}
-        @input=${(event: Event) => {
-          const input = event.currentTarget as HTMLInputElement;
-          input.style.setProperty('--fill', this.sliderFill(input.valueAsNumber, minimum, maximum));
-          input.setAttribute('aria-valuetext', format(input.valueAsNumber));
-        }}
-        @change=${(event: Event) => {
-          const input = event.currentTarget as HTMLInputElement;
-          void this.run({
-            kind: kind === 'target' ? 'temperature' : 'speed',
-            value: input.valueAsNumber,
-          });
-          input.value = String(value);
-          input.style.setProperty('--fill', fill);
-          input.setAttribute('aria-valuetext', reading);
-        }}
-      />
-    </div>`;
+    return renderSlider({
+      kind,
+      confirmed,
+      lower,
+      upper,
+      step,
+      unit,
+      language: this.language,
+      label: this.t(kind),
+      disabled: this.disabled,
+      commit: (value) => {
+        void this.run({ kind: kind === 'target' ? 'temperature' : 'speed', value });
+      },
+    });
   }
   private ambientControl(state: FireplaceState) {
     let reading = '—';
     if (state.ambient) {
-      const language = this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en';
+      const language = this.language;
       reading = numberText(language, state.ambient.value) + ' ' + state.ambient.unit;
     }
     return html`<div>
@@ -494,15 +257,7 @@ export class FlameConnectCard extends LitElement {
     return config[option] && Boolean(config.entities[role]);
   }
   private detailControl(state: FireplaceState, config: CardConfig, kind: DetailControl) {
-    const roles = {
-      ambient: 'ambient',
-      target: 'climate',
-      mode: 'climate',
-      color: 'color',
-      brightness: 'brightness',
-      speed: 'speed',
-    } as const;
-    if (!this.isVisible(config, `show_${kind}`, roles[kind])) return nothing;
+    if (!visibleControl(config, kind)) return nothing;
     const renderers = {
       ambient: () => this.ambientControl(state),
       target: () => this.targetControl(state),
@@ -518,20 +273,15 @@ export class FlameConnectCard extends LitElement {
       ${(['flame', 'heating'] as const).map((kind) => {
         const role = kind === 'flame' ? 'flame' : 'climate';
         if (!config.entities[role]) return nothing;
-        const value = state.power === false ? false : state[kind];
-        let status = 'unknown';
-        if (value !== null) status = value ? 'on' : 'off';
-        const label = kind === 'heating' && state.mode === 'fan_only' ? 'ventilation' : kind;
-        const statusIcon = label === 'ventilation' ? 'mode' : kind;
-        const text =
-          this.t(label) + ' · ' + this.t(status === 'unknown' ? 'not_available' : status);
+        const effect = effectPresentation(state, kind);
+        const text = this.t(effect.label) + ' · ' + this.t(effect.status);
         return html`<span
           role="status"
           data-status=${kind}
-          data-state=${status}
+          data-state=${effect.state}
           aria-label=${text}
           title=${text}
-          >${icon(status === 'unknown' ? 'unavailable' : statusIcon)}</span
+          >${icon(effect.icon)}</span
         >`;
       })}
     </div>`;
