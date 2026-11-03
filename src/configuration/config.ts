@@ -123,6 +123,12 @@ function parseCompactStyle(value: unknown): CardConfig['compact_style'] {
   return value === 'chip' ? 'chip' : 'standard';
 }
 
+function parseChipExpansion(value: unknown): CardConfig['chip_expansion'] {
+  if (value !== undefined && value !== 'modal' && value !== 'inline')
+    throw new ConfigurationError('chip_expansion: expected modal or inline');
+  return value === 'inline' ? 'inline' : 'modal';
+}
+
 export function parseConfig(value: unknown): CardConfig {
   if (!RECORD(value) || value.type !== CARD_TYPE)
     throw new ConfigurationError(`type: expected ${CARD_TYPE}`);
@@ -150,6 +156,7 @@ export function parseConfig(value: unknown): CardConfig {
     entities,
     initial_view: value.initial_view === 'compact' ? 'compact' : 'expanded',
     compact_style: compactStyle,
+    chip_expansion: parseChipExpansion(value.chip_expansion),
     compact_image: value.compact_image === true,
     compact_controls: parseCompactControls(value.compact_controls),
     control_order: parseControlOrder(value.control_order),

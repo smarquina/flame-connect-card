@@ -1,3 +1,5 @@
+import { render } from 'lit';
+import { icon, type IconName } from '../../src/presentation/icons';
 import { config, fakeHass } from './state';
 import type { FlameConnectCard } from '../../src/presentation/card';
 import type { HomeAssistant, RegistryEntry } from '../../src/adapters/home-assistant/types';
@@ -53,3 +55,36 @@ hass.callService = async (domain, service, data, target) => {
 };
 add();
 export type DemoHass = HomeAssistant;
+
+// Render local stand-ins for HA's icon element in the standalone simulator.
+if (!customElements.get('ha-icon'))
+  customElements.define(
+    'ha-icon',
+    class extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+      static get observedAttributes() {
+        return ['icon'];
+      }
+      connectedCallback() {
+        this.attributeChangedCallback();
+      }
+      attributeChangedCallback() {
+        const names: Record<string, IconName> = {
+          'mdi:fireplace': 'fireplace',
+          'mdi:fire': 'flame',
+          'mdi:radiator': 'heating',
+          'mdi:fan': 'mode',
+          'mdi:alert-circle-outline': 'unavailable',
+        };
+        render(icon(names[this.getAttribute('icon') ?? ''] ?? 'unavailable'), this.shadowRoot!);
+        const svg = this.shadowRoot!.querySelector('svg')!;
+        svg.style.width = '20px';
+        svg.style.height = '20px';
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+      }
+    },
+  );

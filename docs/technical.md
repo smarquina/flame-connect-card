@@ -38,7 +38,7 @@ The backend remains responsible for its cloud read/modify/write serialization an
 
 Compact and expanded presentations share one controller and one Home Assistant snapshot per render. Switching layouts updates local presentation state only. It does not reconfigure the card, dispose the controller, send a service call or replay a pending command. Expansion is instance-local rather than an entity or shared browser preference. Sections sizing uses automatic rows; masonry estimates distinguish compact and expanded views and count only mapped, globally visible compact controls, plus the optional visible thumbnail.
 
-The standalone card needs no popup integration. A Mushroom summary plus Browser Mod popup can still host the existing expanded card; that dashboard composition is separate from the built-in layouts.
+Chip mode opens a native HTML dialog in the browser top layer by default. It shares the controller and rendered controls with the expanded view, preserving command serialization and readback. Browser-managed modality handles background interaction and focus containment. Closing by Escape, backdrop or the close button restores focus; reconfiguration and disconnection close the dialog. Dashboard sizing remains compact while it is open. `chip_expansion: inline` selects the earlier inline behavior. The standalone card needs no external popup integration. A Mushroom summary plus Browser Mod popup can still host the existing expanded card; that dashboard composition is separate from the built-in layouts.
 
 ## Security and packaging
 

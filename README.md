@@ -11,7 +11,7 @@ This community project is not affiliated with, approved by, or supported by Glen
 
 [![Open your Home Assistant and add this repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=smarquina&repository=flame-connect-card&category=plugin)
 
-The card can start compact and expand directly inside the dashboard. Both layouts share entity bindings, visibility, order, confirmed state and actions; Mushroom and Browser Mod are optional alternatives, not requirements. Choose **Compact style → Chip** for a horizontal fireplace summary with independent flame/heating buttons and a gray/orange activity icon. Press the summary to expand the same card. Configure **Initial view**, **Controls in compact view** and the compact image option in the visual editor.
+The card can start compact and open its controls in a built-in modal dialog. Both layouts share entity bindings, visibility, order, confirmed state and actions; Mushroom and Browser Mod are optional alternatives, not requirements. Choose **Compact style → Chip** for a horizontal fireplace summary with independent flame/heating buttons and a gray/orange activity icon. Press the chip icon or summary to open the dialog. **Chip expansion → In dashboard** opts into inline expansion. Configure **Initial view**, **Controls in compact view** and the compact image option in the visual editor.
 
 ## Controls
 
@@ -36,6 +36,8 @@ The card uses icons instead of action labels and explanatory paragraphs. Tooltip
 ![Compact Flame Connect Card with simulated states](docs/compact-preview.png)
 
 ![Chip layout with independent flame and heating controls](docs/chip-preview.png)
+
+![Native fireplace controls dialog with simulated entities](docs/dialog-preview.png)
 
 ## Requirements
 

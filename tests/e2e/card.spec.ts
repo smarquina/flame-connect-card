@@ -569,6 +569,7 @@ test('chip provides independent quick actions and keyboard expansion', async ({ 
       type,
       initial_view: 'compact',
       compact_style: 'chip',
+      chip_expansion: 'inline',
       entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
     });
     card.hass = window.demo.hass;
@@ -590,4 +591,79 @@ test('chip provides independent quick actions and keyboard expansion', async ({ 
   expect(
     (await new AxeBuilder({ page }).include('flame-connect-card').analyze()).violations,
   ).toEqual([]);
+});
+
+test('chip opens a native modal by default, keeps its panel size and restores keyboard focus', async ({
+  page,
+}, info) => {
+  await page.evaluate((type) => {
+    const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+    card.setConfig({
+      type,
+      initial_view: 'compact',
+      compact_style: 'chip',
+      entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+    });
+    card.hass = window.demo.hass;
+  }, CARD_TYPE);
+  const card = page.locator('flame-connect-card');
+  const summary = card.getByRole('button', { name: /Expand controls:/ });
+  await expect(summary).toHaveAttribute('aria-haspopup', 'dialog');
+  const before = await card.boundingBox();
+  expect(before!.height).toBeLessThanOrEqual(60);
+  await expect(card.locator('.chip-text strong')).toHaveCSS('font-size', '14px');
+  await expect(card.locator('.chip-text > span')).toHaveCSS('font-size', '12px');
+  await expect(card.locator('.chip-icon')).toHaveCSS('width', '36px');
+  await card.screenshot({ path: `test-results/chip-modal-summary-${info.project.name}.png` });
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  const dialog = card.getByRole('dialog', { name: 'Fireplace controls' });
+  await expect(dialog).toBeVisible();
+  expect((await card.boundingBox())!.height).toBe(before!.height);
+  await expect(dialog.getByRole('button', { name: 'Close controls' })).toBeFocused();
+  await dialog.screenshot({ path: `test-results/chip-modal-details-${info.project.name}.png` });
+  expect(
+    (await new AxeBuilder({ page }).include('flame-connect-card').analyze()).violations,
+  ).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(summary).toBeFocused();
+  await summary.click();
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(1, 1);
+  await expect(dialog).not.toBeVisible();
+  await expect(summary).toBeFocused();
+  await summary.click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close controls' }).click();
+  await expect(dialog).not.toBeVisible();
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
+});
+
+test('modal shares pending commands and external readback with chip actions', async ({ page }) => {
+  await page.evaluate((type) => {
+    const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+    card.setConfig({
+      type,
+      initial_view: 'compact',
+      compact_style: 'chip',
+      entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+    });
+    card.hass = window.demo.hass;
+    window.demo.defer = true;
+  }, CARD_TYPE);
+  const card = page.locator('flame-connect-card');
+  await card.getByRole('button', { name: 'Flame · On', exact: true }).click();
+  await expect(card.getByRole('dialog')).not.toBeVisible();
+  await card.getByRole('button', { name: /Expand controls:/ }).click();
+  const dialog = card.getByRole('dialog');
+  await expect(dialog.getByRole('button', { name: 'Heating · On', exact: true })).toBeDisabled();
+  await page.evaluate(() => {
+    window.demo.hass.states['light.fire_flame']!.state = 'off';
+    window.demo.update();
+  });
+  await expect(dialog.getByRole('button', { name: 'Flame · Off', exact: true })).toBeEnabled();
+  await dialog.getByRole('button', { name: 'Close controls' }).click();
+  await expect(card.getByRole('button', { name: 'Flame · Off', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
 });
