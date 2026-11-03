@@ -30,6 +30,12 @@ Every call targets the configured entity ID. The card sends no whole-device powe
 
 The backend remains responsible for its cloud read/modify/write serialization and the physical device's semantics. A configured power switch in standby takes precedence over retained effect flags in the illustration. Without that entity, effects-off is not interpreted as whole-device standby.
 
+## Layout lifecycle
+
+Compact and expanded presentations share one controller and one Home Assistant snapshot per render. Switching layouts updates local presentation state only. It does not reconfigure the card, dispose the controller, send a service call or replay a pending command. Expansion is instance-local rather than an entity or shared browser preference. Sections sizing uses automatic rows; masonry estimates distinguish compact and expanded views.
+
+The standalone card needs no popup integration. A Mushroom summary plus Browser Mod popup can still host the existing expanded card; that dashboard composition is separate from the built-in layouts.
+
 ## Security and packaging
 
 The card uses Home Assistant's authenticated frontend context. It neither stores nor obtains Flame Connect passwords, access tokens or refresh tokens. Entity data and names are rendered as escaped text. Configuration image overrides are same-origin paths. Default artwork is embedded in the self-contained bundle, with no CDN dependency or runtime discovery request for images.

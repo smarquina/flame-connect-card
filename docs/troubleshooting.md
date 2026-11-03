@@ -18,4 +18,6 @@ The power button requires `entities.power`. It appears by default when mapped un
 
 If flame speed is missing, check that the model exposes its Flame speed Number entity, enable that entity if needed, map it in the card and enable **Show flame speed**. The card reads its numeric range and step from Home Assistant; it does not synthesize speed controls for unsupported devices.
 
+If a control is missing only in compact view, select it under **Controls in compact view**. Its entity binding and global visibility must also be enabled. Expanding intentionally does not restore controls hidden under **Visible elements**. Each card keeps its own expansion state; a reload returns to its configured initial view.
+
 Report card version, backend version, HA version, browser, fireplace model and the affected entity domains. Include a minimal redacted card configuration only when needed. Do not post credentials, JWTs, native callback URLs or full HA state exports.

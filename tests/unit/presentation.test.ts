@@ -401,7 +401,7 @@ it('groups icon-only power, flame and heating and changes the power action after
   const hass = fakeHass();
   hass.callService = vi.fn().mockResolvedValue(undefined);
   const element = await card(hass);
-  const group = element.shadowRoot!.querySelector('[role="group"]')!;
+  const group = element.shadowRoot!.querySelector('[aria-label="Fireplace controls"]')!;
   expect(
     [...group.querySelectorAll('button')].map((entry) => entry.getAttribute('aria-label')),
   ).toEqual(['Turn fireplace off', 'Flame · On', 'Heating · On']);
@@ -620,4 +620,80 @@ it('renders a speed slider, commits once on release, and retains confirmed state
   element.setConfig({ ...config, entities, show_speed: false });
   await element.updateComplete;
   expect(slider()).toBeNull();
+});
+
+it('expands compact controls without sending commands or restoring hidden settings', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn();
+  const element = await card(hass, { initial_view: 'compact', show_target: false });
+  expect(element.getCardSize()).toBe(3);
+  expect(element.shadowRoot!.querySelector('.settings')).toBeNull();
+  expect(element.shadowRoot!.querySelector('.scene')).toBeNull();
+  button(element, 'Expand controls').click();
+  await element.updateComplete;
+  expect(element.getCardSize()).toBe(8);
+  expect(element.shadowRoot!.querySelector('.settings')).not.toBeNull();
+  expect(input(element)).toBeNull();
+  button(element, 'Collapse controls').click();
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('.settings')).toBeNull();
+  expect(hass.callService).not.toHaveBeenCalled();
+  element.setConfig({ ...config, initial_view: 'compact', compact_image: true });
+  await element.updateComplete;
+  expect(element.shadowRoot!.querySelector('.scene')).not.toBeNull();
+});
+
+it('saves the initial view through the visual editor', async () => {
+  const element = await editor();
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  change(select(element, 'Initial view'), 'compact');
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.initial_view).toBe('compact');
+});
+
+it('filters compact settings by shared order and visibility while preserving pending commands across views', async () => {
+  const hass = fakeHass();
+  hass.callService = vi.fn().mockResolvedValue(undefined);
+  const element = await card(hass, {
+    initial_view: 'compact',
+    compact_controls: ['target', 'ambient'],
+    show_target: false,
+  });
+  expect(element.shadowRoot!.querySelector('[data-control="ambient"]')).not.toBeNull();
+  expect(input(element)).toBeNull();
+  button(element, 'Flame').click();
+  await element.updateComplete;
+  button(element, 'Expand controls').click();
+  await element.updateComplete;
+  expect(button(element, 'Flame').disabled).toBe(true);
+  button(element, 'Collapse controls').click();
+  await element.updateComplete;
+  hass.states['light.fire_flame']!.state = 'off';
+  await settle(element, hass);
+  expect(button(element, 'Flame').disabled).toBe(false);
+  expect(hass.callService).toHaveBeenCalledTimes(1);
+  expect(
+    element.shadowRoot!.querySelector('[data-status="flame"]')!.getAttribute('data-state'),
+  ).toBe('off');
+});
+
+it('saves and removes compact controls in the visual editor', async () => {
+  const element = await editor();
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  const check = element.shadowRoot!.querySelector<HTMLInputElement>(
+    '[aria-label="Compact: Target temperature"]',
+  )!;
+  check.checked = true;
+  check.dispatchEvent(new Event('change'));
+  await element.updateComplete;
+  const saved = (changes.mock.lastCall![0] as CustomEvent).detail.config;
+  expect(saved.compact_controls).toEqual(['target']);
+  element.setConfig(saved);
+  await element.updateComplete;
+  check.checked = false;
+  check.dispatchEvent(new Event('change'));
+  await element.updateComplete;
+  expect((changes.mock.lastCall![0] as CustomEvent).detail.config.compact_controls).toEqual([]);
 });

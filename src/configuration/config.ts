@@ -90,10 +90,29 @@ export function parseImageBackground(value: unknown): string {
   throw new Error('image_background: use none, transparent, black, white or a six-digit hex color');
 }
 
+export function parseCompactControls(value: unknown): DetailControl[] {
+  if (value === undefined) return [];
+  if (
+    !Array.isArray(value) ||
+    new Set(value).size !== value.length ||
+    !value.every((entry) => DETAIL_CONTROLS.includes(entry))
+  )
+    throw new Error('compact_controls: use unique supported control names');
+  return [...value];
+}
+
 export function parseConfig(value: unknown): CardConfig {
   if (!RECORD(value) || value.type !== CARD_TYPE) throw new Error(`type: expected ${CARD_TYPE}`);
   if (value.version !== undefined && value.version !== SCHEMA_VERSION)
     throw new Error('version: unsupported configuration version');
+  if (
+    value.initial_view !== undefined &&
+    (typeof value.initial_view !== 'string' ||
+      !['compact', 'expanded'].includes(value.initial_view))
+  )
+    throw new Error('initial_view: expected compact or expanded');
+  if (value.compact_image !== undefined && typeof value.compact_image !== 'boolean')
+    throw new Error('compact_image: expected a boolean');
   const entities = parseEntities(value.entities);
   if (value.name !== undefined && (typeof value.name !== 'string' || !value.name.trim()))
     throw new Error('name: expected a non-empty string');
@@ -105,6 +124,9 @@ export function parseConfig(value: unknown): CardConfig {
     type: CARD_TYPE,
     version: SCHEMA_VERSION,
     entities,
+    initial_view: value.initial_view === 'compact' ? 'compact' : 'expanded',
+    compact_image: value.compact_image === true,
+    compact_controls: parseCompactControls(value.compact_controls),
     control_order: parseControlOrder(value.control_order),
     images: parseImages(value.images),
     image_background: parseImageBackground(value.image_background),

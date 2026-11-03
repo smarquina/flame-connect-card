@@ -11,6 +11,8 @@ This community project is not affiliated with, approved by, or supported by Glen
 
 [![Open your Home Assistant and add this repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=smarquina&repository=flame-connect-card&category=plugin)
 
+The card can start compact and expand directly inside the dashboard. Both layouts share entity bindings, visibility, order, confirmed state and actions; Mushroom and Browser Mod are optional alternatives, not requirements. Configure **Initial view**, **Controls in compact view** and the compact image option in the visual editor.
+
 ## Controls
 
 - Grouped icon buttons for whole-device power, decorative flame and heating/ventilation. The power button offers start when off and power-off when on; it requires a mapped power entity.
@@ -30,6 +32,8 @@ The illustrations use the supplied four-state artwork. They do not animate or re
 ![Flame Connect Card preview using simulated entity states](docs/preview.png)
 
 The card uses icons instead of action labels and explanatory paragraphs. Tooltips identify controls on hover; accessible names support screen readers and keyboard navigation. Temperature values and selected options remain visible. Pending commands and errors use status icons with accessible messages.
+
+![Compact Flame Connect Card with simulated states](docs/compact-preview.png)
 
 ## Requirements
 
@@ -84,6 +88,7 @@ Entity names above are examples: use your actual entity IDs. At least `flame` or
 
 - [Installation, updates and removal](docs/installation.md)
 - [Configuration and entity mapping](docs/configuration.md)
+- [Dashboard layouts and optional Mushroom integration](docs/dashboard-integration.md)
 - [Architecture, state handling and compatibility](docs/technical.md)
 - [Troubleshooting](docs/troubleshooting.md)
 

@@ -46,6 +46,30 @@ export class FlameConnectCard extends LitElement {
         margin: 0 0 4px;
         font-weight: 600;
       }
+      .status-icons {
+        display: flex;
+        gap: 8px;
+        color: var(--secondary-text-color, #555);
+      }
+      .status-icons [data-state='on'] {
+        color: var(--primary-color, #007a91);
+      }
+      .status-icons [data-state='unknown'] {
+        color: var(--error-color, #a72020);
+      }
+      .view-toggle {
+        display: grid;
+        place-items: center;
+        min-width: 44px;
+      }
+      ha-card[data-view='compact'] .body {
+        padding-top: 8px;
+        gap: 12px;
+      }
+      ha-card[data-view='compact'] .scene {
+        width: min(100%, 220px);
+        margin-inline: auto;
+      }
       .scene {
         aspect-ratio: 2.05;
         background-color: #000;
@@ -230,6 +254,7 @@ export class FlameConnectCard extends LitElement {
   private controller?: FireplaceController;
   private error = '';
   private generation = 0;
+  private expanded = true;
 
   set hass(value: HomeAssistant) {
     this.currentHass = value;
@@ -241,6 +266,7 @@ export class FlameConnectCard extends LitElement {
     this.generation++;
     this.controller?.dispose();
     this.config = config;
+    this.expanded = config.initial_view === 'expanded';
     this.error = '';
     this.controller = composeController(
       () => this.currentHass,
@@ -255,7 +281,8 @@ export class FlameConnectCard extends LitElement {
     this.controller?.dispose();
   }
   getCardSize(): number {
-    return 8;
+    if (this.expanded) return 8;
+    return 3 + this.config!.compact_controls.length * 2;
   }
   getGridOptions() {
     return { columns: 12, rows: 'auto', min_columns: 6 };
@@ -486,25 +513,74 @@ export class FlameConnectCard extends LitElement {
     };
     return html`<div data-control=${kind}>${renderers[kind]()}</div>`;
   }
+  private statusIcons(state: FireplaceState, config: CardConfig) {
+    return html`<div class="status-icons" role="group" aria-label=${this.t('effect_status')}>
+      ${(['flame', 'heating'] as const).map((kind) => {
+        const role = kind === 'flame' ? 'flame' : 'climate';
+        if (!config.entities[role]) return nothing;
+        const value = state.power === false ? false : state[kind];
+        let status = 'unknown';
+        if (value !== null) status = value ? 'on' : 'off';
+        const label = kind === 'heating' && state.mode === 'fan_only' ? 'ventilation' : kind;
+        const statusIcon = label === 'ventilation' ? 'mode' : kind;
+        const text =
+          this.t(label) + ' · ' + this.t(status === 'unknown' ? 'not_available' : status);
+        return html`<span
+          role="status"
+          data-status=${kind}
+          data-state=${status}
+          aria-label=${text}
+          title=${text}
+          >${icon(status === 'unknown' ? 'unavailable' : statusIcon)}</span
+        >`;
+      })}
+    </div>`;
+  }
+  private changeView(): void {
+    this.expanded = !this.expanded;
+    this.requestUpdate();
+  }
+  private settings(state: FireplaceState, config: CardConfig) {
+    const controls = config.control_order.filter(
+      (kind) => this.expanded || config.compact_controls.includes(kind),
+    );
+    if (!controls.length) return nothing;
+    return html`<div id="settings" class="settings">
+      ${controls.map((kind) => this.detailControl(state, config, kind))}
+    </div>`;
+  }
   protected render() {
     const state = this.snapshot();
     const config = this.config;
     if (!state || !config) return nothing;
-    return html`<ha-card aria-label=${state.name}>
+    return html`<ha-card
+      aria-label=${state.name}
+      data-view=${this.expanded ? 'expanded' : 'compact'}
+    >
       <header>
         <div>
           <h2>${state.name === 'Fireplace' ? this.t('title') : state.name}</h2>
           <p class="sr-only" role="status">${this.t(this.status(state))}</p>
+          ${this.statusIcons(state, config)}
         </div>
+        <button
+          class="view-toggle"
+          type="button"
+          aria-label=${this.t(this.expanded ? 'collapse' : 'expand')}
+          title=${this.t(this.expanded ? 'collapse' : 'expand')}
+          aria-expanded=${String(this.expanded)}
+          aria-controls="card-body"
+          @click=${() => this.changeView()}
+        >
+          ${icon(this.expanded ? 'collapse' : 'expand')}
+        </button>
       </header>
-      ${this.image(state, config)}
-      <div class="body">
+      ${this.expanded || config.compact_image ? this.image(state, config) : nothing}
+      <div class="body" id="card-body">
         <div class="toggles" role="group" aria-label=${this.t('controls')}>
           ${this.powerControl(state, config)}${this.isVisible(config, 'show_flame', 'flame') ? this.toggle(state, 'flame') : nothing}${this.isVisible(config, 'show_heating', 'climate') ? this.toggle(state, 'heating') : nothing}
         </div>
-        <div class="settings">
-          ${config.control_order.map((kind) => this.detailControl(state, config, kind))}
-        </div>
+        ${this.settings(state, config)}
         ${this.controller?.busy ? html`<div class="feedback" role="status" title=${this.t('pending')}>${icon('pending')}<span class="sr-only">${this.t('pending')}</span></div>` : nothing}
         ${this.error ? html`<div class="feedback error" role="alert" title=${this.t(this.error)}>${icon('unavailable')}<span class="sr-only">${this.t(this.error)}</span></div>` : nothing}
       </div>

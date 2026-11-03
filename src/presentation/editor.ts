@@ -230,6 +230,33 @@ export class FlameConnectCardEditor extends LitElement {
       /></label>
     </fieldset>`;
   }
+  private compactControls() {
+    const selected = Array.isArray(this.config.compact_controls)
+      ? this.config.compact_controls
+      : [];
+    return html`<fieldset class="entities">
+      <legend>${this.t('compact_controls')}</legend>
+      ${DETAIL_CONTROLS.map(
+        (kind) =>
+          html`<label class="check"
+            ><input
+              type="checkbox"
+              aria-label=${this.t('compact') + ': ' + this.t(kind)}
+              .checked=${selected.includes(kind)}
+              @change=${(event: Event) => {
+                const enabled = (event.currentTarget as HTMLInputElement).checked;
+                const controls = selected.filter((entry) => entry !== kind);
+                this.config = {
+                  ...this.config,
+                  compact_controls: enabled ? [...controls, kind] : controls,
+                };
+                this.emit();
+              }}
+            />${this.t(kind)}</label
+          >`,
+      )}
+    </fieldset>`;
+  }
   protected render() {
     const bindings = this.bindings();
     const images = this.config.images as CardConfig['images'] | undefined;
@@ -294,7 +321,36 @@ export class FlameConnectCardEditor extends LitElement {
             >`,
         )}
       </fieldset>
-      ${this.orderControls()} ${this.backgroundControl()}
+      <label
+        >${this.t('initial_view')}<select
+          aria-label=${this.t('initial_view')}
+          .value=${String(this.config.initial_view ?? 'expanded')}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              initial_view: (event.currentTarget as HTMLSelectElement).value,
+            };
+            this.emit();
+          }}
+        >
+          <option value="compact">${this.t('compact')}</option>
+          <option value="expanded">${this.t('expanded')}</option>
+        </select></label
+      >
+      <label class="check"
+        ><input
+          type="checkbox"
+          .checked=${this.config.compact_image === true}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              compact_image: (event.currentTarget as HTMLInputElement).checked,
+            };
+            this.emit();
+          }}
+        />${this.t('compact_image')}</label
+      >
+      ${this.compactControls()} ${this.orderControls()} ${this.backgroundControl()}
       <p class="hint">${this.t('power_hint')}</p>
       <details>
         <summary>${this.t('show_image')}</summary>

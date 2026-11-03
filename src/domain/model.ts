@@ -32,6 +32,9 @@ export interface CardConfig extends Record<VisibilityOption, boolean> {
   entities: Bindings;
   control_order: DetailControl[];
   image_background: string;
+  initial_view: 'compact' | 'expanded';
+  compact_image: boolean;
+  compact_controls: DetailControl[];
   images: Partial<Record<Exclude<VisualState, 'unknown'>, string>>;
 }
 export interface Choice {

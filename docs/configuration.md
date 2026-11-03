@@ -20,7 +20,34 @@ Use the visual card editor or the dashboard's YAML card editor. These options co
 | `show_speed`       | boolean | `true`                                              | Display the flame-speed slider when its number entity is mapped                              |
 | `control_order`    | array   | `[ambient, target, mode, color, brightness, speed]` | Reading and selector order; include each key exactly once                                    |
 | `image_background` | string  | `"#000000"`                                         | Fireplace image background: `none`, `transparent`, `black`, `white` or a six-digit hex color |
+| `initial_view`     | string  | `expanded`                                          | Initial layout: `compact` or `expanded`                                                      |
+| `compact_image`    | boolean | `false`                                             | Allow the illustration as a thumbnail in compact view; still requires `show_image`           |
+| `compact_controls` | array   | `[]`                                                | Subset of detail controls available in compact view; shared order and visibility still apply |
 | `images`           | object  | Bundled artwork                                     | Optional per-state images                                                                    |
+
+## Compact and expanded views
+
+Choose **Initial view** in the visual editor. Existing configurations default to **Expanded**. **Compact** shows the name, independent flame/heating status icons and the grouped quick actions. A dedicated expand/collapse button switches layouts in place without Mushroom, Browser Mod, another card instance or a popup. Opening details does not send fireplace commands.
+
+**Controls in compact view** selects a subset of `ambient`, `target`, `mode`, `color`, `brightness` and `speed`. They follow the shared `control_order`. A globally hidden or unmapped control remains hidden in both layouts. The optional **Show image in compact view** uses the same four-state image and background as expanded view; `show_image: false` suppresses it everywhere.
+
+```yaml
+type: custom:flame-connect-card
+entities:
+  flame: light.living_room_flame
+  climate: climate.living_room_heating
+  ambient: sensor.living_room_temperature
+initial_view: compact
+compact_image: false
+compact_controls:
+  - ambient
+  - mode
+show_target: false
+```
+
+Flame and heating states remain independently visible even if an action button is hidden. A warning icon represents unknown state rather than a confirmed shutdown. Heating indicates enabled heating/ventilation, not measured heat output. Confirmed whole-device standby takes precedence over retained effect flags.
+
+Expansion state is local to each card instance and resets to `initial_view` when the card is loaded or reconfigured. Expanding during a pending command preserves the same controller, timeout and readback. Controls remain disabled until confirmation or failure; changing layout never retries a command. Multiple cards can use different layouts while following the same Home Assistant entities.
 
 ## Visible elements
 

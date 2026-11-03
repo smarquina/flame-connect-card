@@ -461,3 +461,68 @@ test('flame speed slider commits once per drag, tracks readback and never change
   await expect(slider).toBeDisabled();
   await expect(page.locator('flame-connect-card .speed-value')).toHaveText('—');
 });
+
+test('compact and expanded views share controls, readback and hidden preferences', async ({
+  page,
+}, info) => {
+  await page.evaluate((type) => {
+    const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+    card.setConfig({
+      type,
+      entities: {
+        flame: 'light.fire_flame',
+        climate: 'climate.fire_heating',
+        ambient: 'sensor.room_temperature',
+      },
+      initial_view: 'compact',
+      compact_controls: ['ambient', 'target'],
+      show_target: false,
+    });
+    card.hass = window.demo.hass;
+    window.demo.defer = true;
+  }, CARD_TYPE);
+  const card = page.locator('flame-connect-card');
+  await expect(card.locator('ha-card')).toHaveAttribute('data-view', 'compact');
+  await expect(card.getByRole('img')).toHaveCount(0);
+  await expect(card.getByText('19.5 °C', { exact: true })).toBeVisible();
+  await expect(card.getByRole('slider', { name: 'Target temperature' })).toHaveCount(0);
+  await expect(card.locator('[data-status=flame]')).toHaveAttribute('data-state', 'on');
+  await card.screenshot({ path: `test-results/compact-${info.project.name}.png` });
+  await card.getByRole('button', { name: 'Flame · On', exact: true }).click();
+  const expand = card.getByRole('button', { name: 'Expand controls', exact: true });
+  await expand.focus();
+  await page.keyboard.press('Enter');
+  await expect(card.getByRole('button', { name: 'Collapse controls' })).toBeFocused();
+  await expect(card.getByRole('img')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Flame · On', exact: true })).toBeDisabled();
+  await expect(card.getByRole('slider', { name: 'Target temperature' })).toHaveCount(0);
+  await card.getByRole('button', { name: 'Collapse controls' }).click();
+  await page.evaluate(() => {
+    window.demo.hass.states['light.fire_flame']!.state = 'off';
+    window.demo.update();
+  });
+  await expect(card.getByRole('button', { name: 'Flame · Off', exact: true })).toBeEnabled();
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
+  await page.evaluate(() => {
+    window.demo.hass.states['climate.fire_heating']!.state = 'unavailable';
+    window.demo.update();
+  });
+  await expect(card.locator('[data-status=heating]')).toHaveAttribute('data-state', 'unknown');
+  expect(
+    (await new AxeBuilder({ page }).include('flame-connect-card').analyze()).violations,
+  ).toEqual([]);
+});
+
+test('editor configures compact selection without commands and card instances expand independently', async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    window.demo.add('Second fireplace');
+  });
+  const first = page.locator('flame-connect-card').first();
+  const second = page.locator('flame-connect-card').nth(1);
+  await first.getByRole('button', { name: 'Collapse controls' }).click();
+  await expect(first.locator('ha-card')).toHaveAttribute('data-view', 'compact');
+  await expect(second.locator('ha-card')).toHaveAttribute('data-view', 'expanded');
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
+});
