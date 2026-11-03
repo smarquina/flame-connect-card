@@ -80,5 +80,14 @@
   "background_none": "Ninguno (transparente)",
   "background_color": "Color de fondo",
   "speed": "Velocidad de llama",
-  "show_speed": "Mostrar velocidad de llama"
+  "show_speed": "Mostrar velocidad de llama",
+  "expand": "Ampliar controles",
+  "collapse": "Contraer controles",
+  "initial_view": "Vista inicial",
+  "compact": "Compacta",
+  "expanded": "Ampliada",
+  "compact_image": "Mostrar imagen en vista compacta",
+  "effect_status": "Estado de llama y calefacción",
+  "compact_controls": "Controles en vista compacta",
+  "refresh_discovery": "Actualizar chimeneas"
 }

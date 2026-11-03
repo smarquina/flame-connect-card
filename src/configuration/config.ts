@@ -9,51 +9,65 @@ import {
   type EntityRole,
 } from '../domain/model';
 
-const DOMAINS: Record<EntityRole, string> = {
-  power: 'switch',
-  flame: 'light',
-  climate: 'climate',
-  color: 'select',
-  brightness: 'select',
-  speed: 'number',
-  ambient: 'sensor',
-};
+import { ENTITY_CONTRACTS } from './entity-contracts';
+
+export class ConfigurationError extends Error {
+  readonly code = 'invalid_config';
+  readonly field: string;
+  constructor(readonly detail: string) {
+    super(detail);
+    this.field = detail.split(':')[0]!;
+  }
+}
+
 const RECORD = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export function validateImage(value: unknown): string {
   if (typeof value !== 'string')
-    throw new Error('images: use a same-origin absolute path, e.g. /local/fireplace.png');
+    throw new ConfigurationError(
+      'images: use a same-origin absolute path, e.g. /local/fireplace.png',
+    );
   const url = new URL(value, 'https://home-assistant.invalid');
   if (url.origin !== 'https://home-assistant.invalid')
-    throw new Error('images: external URLs are not supported; use a same-origin absolute path');
+    throw new ConfigurationError(
+      'images: external URLs are not supported; use a same-origin absolute path',
+    );
   if (!/^\/(?!\/)[^\s\\]*$/.test(value))
-    throw new Error('images: use a same-origin absolute path, e.g. /local/fireplace.png');
+    throw new ConfigurationError(
+      'images: use a same-origin absolute path, e.g. /local/fireplace.png',
+    );
   return value;
 }
 
 function parseEntities(value: unknown): CardConfig['entities'] {
-  if (!RECORD(value)) throw new Error('entities: select a flame or climate entity');
+  if (!RECORD(value)) throw new ConfigurationError('entities: select a flame or climate entity');
   const entities: CardConfig['entities'] = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (!Object.hasOwn(DOMAINS, key)) throw new Error(`entities.${key}: unsupported role`);
+    if (!Object.hasOwn(ENTITY_CONTRACTS, key))
+      throw new ConfigurationError(`entities.${key}: unsupported role`);
     const role = key as EntityRole;
-    if (typeof entry !== 'string' || !new RegExp(`^${DOMAINS[role]}\\.[a-z0-9_]+$`).test(entry))
-      throw new Error(`entities.${key}: expected a ${DOMAINS[role]} entity`);
+    if (
+      typeof entry !== 'string' ||
+      !new RegExp(`^${ENTITY_CONTRACTS[role].domain}\\.[a-z0-9_]+$`).test(entry)
+    )
+      throw new ConfigurationError(
+        `entities.${key}: expected a ${ENTITY_CONTRACTS[role].domain} entity`,
+      );
     entities[role] = entry;
   }
   if (!entities.flame && !entities.climate)
-    throw new Error('entities: select a flame or climate entity');
+    throw new ConfigurationError('entities: select a flame or climate entity');
   return entities;
 }
 
 function parseImages(value: unknown): CardConfig['images'] {
   const images: CardConfig['images'] = {};
   if (value === undefined) return images;
-  if (!RECORD(value)) throw new Error('images: expected an object');
+  if (!RECORD(value)) throw new ConfigurationError('images: expected an object');
   for (const [key, image] of Object.entries(value)) {
     if (!['off', 'flame', 'heat', 'both'].includes(key))
-      throw new Error(`images.${key}: unsupported state`);
+      throw new ConfigurationError(`images.${key}: unsupported state`);
     images[key as keyof typeof images] = validateImage(image);
   }
   return images;
@@ -61,7 +75,7 @@ function parseImages(value: unknown): CardConfig['images'] {
 
 export function parseControlOrder(value: unknown): DetailControl[] {
   if (value === undefined) return [...DETAIL_CONTROLS];
-  if (!Array.isArray(value)) throw new Error('control_order: expected an array');
+  if (!Array.isArray(value)) throw new ConfigurationError('control_order: expected an array');
   const legacy = value.length === LEGACY_DETAIL_CONTROLS.length && !value.includes('speed');
   const length = legacy ? LEGACY_DETAIL_CONTROLS.length : DETAIL_CONTROLS.length;
   if (
@@ -69,7 +83,7 @@ export function parseControlOrder(value: unknown): DetailControl[] {
     new Set(value).size !== length ||
     !value.every((entry) => DETAIL_CONTROLS.includes(entry))
   )
-    throw new Error(
+    throw new ConfigurationError(
       'control_order: include ambient, target, mode, color, brightness and speed exactly once',
     );
   return legacy ? [...value, 'speed'] : [...value];
@@ -87,24 +101,49 @@ export function parseImageBackground(value: unknown): string {
     if (Object.hasOwn(presets, value)) return presets[value]!;
     if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase();
   }
-  throw new Error('image_background: use none, transparent, black, white or a six-digit hex color');
+  throw new ConfigurationError(
+    'image_background: use none, transparent, black, white or a six-digit hex color',
+  );
+}
+
+export function parseCompactControls(value: unknown): DetailControl[] {
+  if (value === undefined) return [];
+  if (
+    !Array.isArray(value) ||
+    new Set(value).size !== value.length ||
+    !value.every((entry) => DETAIL_CONTROLS.includes(entry))
+  )
+    throw new ConfigurationError('compact_controls: use unique supported control names');
+  return [...value];
 }
 
 export function parseConfig(value: unknown): CardConfig {
-  if (!RECORD(value) || value.type !== CARD_TYPE) throw new Error(`type: expected ${CARD_TYPE}`);
+  if (!RECORD(value) || value.type !== CARD_TYPE)
+    throw new ConfigurationError(`type: expected ${CARD_TYPE}`);
   if (value.version !== undefined && value.version !== SCHEMA_VERSION)
-    throw new Error('version: unsupported configuration version');
+    throw new ConfigurationError('version: unsupported configuration version');
+  if (
+    value.initial_view !== undefined &&
+    (typeof value.initial_view !== 'string' ||
+      !['compact', 'expanded'].includes(value.initial_view))
+  )
+    throw new ConfigurationError('initial_view: expected compact or expanded');
+  if (value.compact_image !== undefined && typeof value.compact_image !== 'boolean')
+    throw new ConfigurationError('compact_image: expected a boolean');
   const entities = parseEntities(value.entities);
   if (value.name !== undefined && (typeof value.name !== 'string' || !value.name.trim()))
-    throw new Error('name: expected a non-empty string');
+    throw new ConfigurationError('name: expected a non-empty string');
   for (const key of VISIBILITY_OPTIONS) {
     if (value[key] !== undefined && typeof value[key] !== 'boolean')
-      throw new Error(`${key}: expected a boolean`);
+      throw new ConfigurationError(`${key}: expected a boolean`);
   }
   return {
     type: CARD_TYPE,
     version: SCHEMA_VERSION,
     entities,
+    initial_view: value.initial_view === 'compact' ? 'compact' : 'expanded',
+    compact_image: value.compact_image === true,
+    compact_controls: parseCompactControls(value.compact_controls),
     control_order: parseControlOrder(value.control_order),
     images: parseImages(value.images),
     image_background: parseImageBackground(value.image_background),

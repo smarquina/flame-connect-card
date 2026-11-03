@@ -1,23 +1,8 @@
-import type { Bindings, EntityRole } from '../../domain/model';
+import type { Bindings } from '../../domain/model';
 import type { HomeAssistant, RegistryEntry } from './types';
 
-type DiscoveredRole = Exclude<EntityRole, 'ambient'>;
-const SUFFIXES: Record<DiscoveredRole, string> = {
-  power: '_power',
-  flame: '_flame',
-  climate: '_heating',
-  color: '_color',
-  brightness: '_brightness',
-  speed: '_speed',
-};
-const DOMAINS: Record<DiscoveredRole, string> = {
-  power: 'switch.',
-  flame: 'light.',
-  climate: 'climate.',
-  color: 'select.',
-  brightness: 'select.',
-  speed: 'number.',
-};
+import { ENTITY_CONTRACTS, ENTITY_ROLES } from '../../configuration/entity-contracts';
+
 export interface DiscoveredFireplace {
   id: string;
   name: string;
@@ -27,11 +12,18 @@ export interface DiscoveredFireplace {
 export async function discover(hass: HomeAssistant): Promise<DiscoveredFireplace[]> {
   const entries = await hass.callWS<RegistryEntry[]>({ type: 'config/entity_registry/list' });
   const devices = new Map<string, DiscoveredFireplace>();
-  for (const entry of entries) {
+  for (const entry of [...entries].sort((left, right) =>
+    left.entity_id.localeCompare(right.entity_id, 'en'),
+  )) {
     if (entry.platform !== 'flame_connect' || !entry.device_id || entry.disabled_by) continue;
-    const role = (Object.keys(SUFFIXES) as DiscoveredRole[]).find(
-      (key) => entry.unique_id.endsWith(SUFFIXES[key]) && entry.entity_id.startsWith(DOMAINS[key]),
-    );
+    const role = ENTITY_ROLES.find((key) => {
+      const { suffix, domain } = ENTITY_CONTRACTS[key];
+      return (
+        suffix !== null &&
+        entry.unique_id.endsWith(suffix) &&
+        entry.entity_id.startsWith(domain + '.')
+      );
+    });
     if (!role) continue;
     const device = devices.get(entry.device_id) ?? {
       id: entry.device_id,
@@ -39,11 +31,16 @@ export async function discover(hass: HomeAssistant): Promise<DiscoveredFireplace
       entities: {},
     };
     device.entities[role] = entry.entity_id;
-    if (role === 'climate' || role === 'flame') {
+    if (role === 'climate' || (role === 'flame' && !device.entities.climate)) {
       const name = hass.states[entry.entity_id]?.attributes.friendly_name;
       if (typeof name === 'string') device.name = name;
     }
     devices.set(entry.device_id, device);
   }
-  return [...devices.values()].filter((device) => device.entities.flame || device.entities.climate);
+  return [...devices.values()]
+    .filter((device) => device.entities.flame || device.entities.climate)
+    .sort(
+      (left, right) =>
+        left.name.localeCompare(right.name, 'en') || left.id.localeCompare(right.id, 'en'),
+    );
 }

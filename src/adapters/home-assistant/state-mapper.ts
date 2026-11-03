@@ -1,5 +1,5 @@
 import type { CardConfig, Choice, FireplaceState, Temperature } from '../../domain/model';
-import { convertTemperature } from '../../domain/state';
+import { convertTemperature, validNumericValue } from '../../domain/state';
 import type { HassEntity, HomeAssistant } from './types';
 
 const UNAVAILABLE = new Set(['unavailable', 'unknown']);
@@ -69,14 +69,10 @@ function speedSetting(entity: HassEntity | undefined): FireplaceState['speed'] {
   const maximum = numeric(entity.attributes.max);
   const step = numeric(entity.attributes.step);
   if (
-    !Number.isFinite(value) ||
     minimum === null ||
     maximum === null ||
     step === null ||
-    step <= 0 ||
-    maximum < minimum ||
-    value < minimum ||
-    value > maximum
+    !validNumericValue(value, minimum, maximum, step)
   )
     return null;
   return { value, minimum, maximum, step };
@@ -93,6 +89,13 @@ export function mapState(config: CardConfig, hass: HomeAssistant): FireplaceStat
     strings(attr.hvac_modes).includes('off');
   const nativeUnit = unit(attr.temperature_unit) ?? unit(hass.config?.unit_system?.temperature);
   const targetValue = numeric(attr.temperature);
+  const range = limits(attr);
+  const validTarget =
+    targetValue !== null &&
+    range.minimum !== null &&
+    range.maximum !== null &&
+    range.step !== null &&
+    validNumericValue(targetValue, range.minimum, range.maximum, range.step);
   const friendlyName = climate?.attributes.friendly_name ?? flame?.attributes.friendly_name;
   return {
     speed: speedSetting(get('speed')),
@@ -104,11 +107,16 @@ export function mapState(config: CardConfig, hass: HomeAssistant): FireplaceStat
     mode: available(climate) && typeof attr.preset_mode === 'string' ? attr.preset_mode : null,
     modes: strings(attr.preset_modes),
     target:
-      climateAvailable && targetValue !== null && nativeUnit
-        ? { value: targetValue, unit: nativeUnit }
+      climateAvailable && validTarget && targetValue !== null && nativeUnit
+        ? {
+            value: targetValue,
+            unit: nativeUnit,
+            minimum: range.minimum!,
+            maximum: range.maximum!,
+            step: range.step!,
+          }
         : null,
     ambient: ambientReading(get('ambient'), nativeUnit),
-    ...limits(attr),
     color: choice(get('color')),
     brightness: choice(get('brightness')),
   };

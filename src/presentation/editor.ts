@@ -8,21 +8,21 @@ import {
   type CardConfig,
   type EntityRole,
 } from '../domain/model';
-import { parseConfig, parseControlOrder, parseImageBackground } from '../configuration/config';
+import {
+  ConfigurationError,
+  parseConfig,
+  parseControlOrder,
+  parseImageBackground,
+} from '../configuration/config';
 import { discover, type DiscoveredFireplace } from '../adapters/home-assistant/discovery';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
-import { localize } from '../localization/localize';
+import { translate, type TranslationKey } from '../localization/localize';
 import { sharedStyles } from './styles';
 
-const ROLES: Record<EntityRole, string> = {
-  climate: 'climate.',
-  flame: 'light.',
-  power: 'switch.',
-  ambient: 'sensor.',
-  color: 'select.',
-  brightness: 'select.',
-  speed: 'number.',
-};
+import { ENTITY_CONTRACTS, ENTITY_ROLES } from '../configuration/entity-contracts';
+
+export const DISCOVERY_TIMEOUT_MS = 15_000;
+
 export class FlameConnectCardEditor extends LitElement {
   static readonly styles = [
     sharedStyles,
@@ -69,32 +69,55 @@ export class FlameConnectCardEditor extends LitElement {
     entities: {},
   };
   private fireplaces: DiscoveredFireplace[] = [];
-  private discoveryStarted = false;
-  private discoveryFailed = false;
+  private discoveryState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
+  private discoveryGeneration = 0;
+  private discoveryTimer?: ReturnType<typeof setTimeout>;
   private error = '';
   set hass(value: HomeAssistant) {
     this.currentHass = value;
-    if (!this.discoveryStarted) {
-      this.discoveryStarted = true;
-      void discover(value)
-        .then((devices) => {
-          this.fireplaces = devices;
-          this.requestUpdate();
-        })
-        .catch(() => {
-          this.discoveryFailed = true;
-          this.requestUpdate();
-        });
-    }
+    if (this.discoveryState === 'idle') void this.refreshDiscovery();
     this.requestUpdate();
+  }
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.discoveryGeneration++;
+    clearTimeout(this.discoveryTimer);
+    this.discoveryTimer = undefined;
+    this.discoveryState = 'idle';
+  }
+  private async refreshDiscovery(): Promise<void> {
+    if (!this.currentHass || this.discoveryState === 'loading') return;
+    const generation = ++this.discoveryGeneration;
+    this.discoveryState = 'loading';
+    this.requestUpdate();
+    try {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const devices = await Promise.race([
+        discover(this.currentHass),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Discovery timeout')), DISCOVERY_TIMEOUT_MS);
+          this.discoveryTimer = timer;
+        }),
+      ]).finally(() => clearTimeout(timer));
+      if (generation !== this.discoveryGeneration) return;
+      this.fireplaces = devices;
+      this.discoveryState = 'ready';
+    } catch {
+      if (generation === this.discoveryGeneration) this.discoveryState = 'error';
+    } finally {
+      if (generation === this.discoveryGeneration) {
+        this.discoveryTimer = undefined;
+        this.requestUpdate();
+      }
+    }
   }
   setConfig(value: unknown): void {
     if (value && typeof value === 'object' && !Array.isArray(value))
       this.config = structuredClone(value as Record<string, unknown>);
     this.requestUpdate();
   }
-  private t(key: string): string {
-    return localize(this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en', key);
+  private t(key: TranslationKey): string {
+    return translate(this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en', key);
   }
   private bindings(): CardConfig['entities'] {
     return (this.config.entities as CardConfig['entities']) ?? {};
@@ -107,7 +130,7 @@ export class FlameConnectCardEditor extends LitElement {
         new CustomEvent('config-changed', { detail: { config }, bubbles: true, composed: true }),
       );
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Invalid configuration';
+      this.error = error instanceof ConfigurationError ? error.field : 'configuration';
     }
     this.requestUpdate();
   }
@@ -134,7 +157,7 @@ export class FlameConnectCardEditor extends LitElement {
   private options(role: EntityRole): string[] {
     return Object.keys(this.currentHass?.states ?? {})
       .filter((entity) => {
-        if (!entity.startsWith(ROLES[role])) return false;
+        if (!entity.startsWith(ENTITY_CONTRACTS[role].domain + '.')) return false;
         return (
           role !== 'ambient' ||
           this.currentHass?.states[entity]?.attributes.device_class === 'temperature'
@@ -230,8 +253,36 @@ export class FlameConnectCardEditor extends LitElement {
       /></label>
     </fieldset>`;
   }
+  private compactControls() {
+    const selected = Array.isArray(this.config.compact_controls)
+      ? this.config.compact_controls
+      : [];
+    return html`<fieldset class="entities">
+      <legend>${this.t('compact_controls')}</legend>
+      ${DETAIL_CONTROLS.map(
+        (kind) =>
+          html`<label class="check"
+            ><input
+              type="checkbox"
+              aria-label=${this.t('compact') + ': ' + this.t(kind)}
+              .checked=${selected.includes(kind)}
+              @change=${(event: Event) => {
+                const enabled = (event.currentTarget as HTMLInputElement).checked;
+                const controls = selected.filter((entry) => entry !== kind);
+                this.config = {
+                  ...this.config,
+                  compact_controls: enabled ? [...controls, kind] : controls,
+                };
+                this.emit();
+              }}
+            />${this.t(kind)}</label
+          >`,
+      )}
+    </fieldset>`;
+  }
   protected render() {
     const bindings = this.bindings();
+    const options = new Map(ENTITY_ROLES.map((role) => [role, this.options(role)]));
     const images = this.config.images as CardConfig['images'] | undefined;
     return html`<div class="editor">
       <p class="hint">${this.t('editor_description')}</p>
@@ -244,7 +295,14 @@ export class FlameConnectCardEditor extends LitElement {
           ${this.fireplaces.map((device) => html`<option value=${device.id}>${device.name}</option>`)}
         </select></label
       >
-      ${this.discoveryFailed ? html`<p class="hint" role="status">${this.t('discovery_failed')}</p>` : nothing}
+      <button
+        type="button"
+        ?disabled=${!this.currentHass || this.discoveryState === 'loading'}
+        @click=${() => this.refreshDiscovery()}
+      >
+        ${this.t('refresh_discovery')}
+      </button>
+      ${this.discoveryState === 'error' ? html`<p class="hint" role="status">${this.t('discovery_failed')}</p>` : nothing}
       <label
         >${this.t('name')}<input
           aria-label=${this.t('name')}
@@ -258,17 +316,17 @@ export class FlameConnectCardEditor extends LitElement {
           }}
       /></label>
       <div class="entities">
-        ${(Object.keys(ROLES) as EntityRole[]).map(
+        ${ENTITY_ROLES.map(
           (role) =>
             html` <label
-              >${this.t(role === 'climate' ? 'heating' : role)}<select
-                aria-label=${this.t(role === 'climate' ? 'heating' : role)}
+              >${this.t(ENTITY_CONTRACTS[role].label)}<select
+                aria-label=${this.t(ENTITY_CONTRACTS[role].label)}
                 .value=${bindings[role] ?? ''}
                 @change=${(event: Event) => this.entity(role, event)}
               >
                 <option value="">—</option>
-                ${bindings[role] && !this.options(role).includes(bindings[role]!) ? html`<option value=${bindings[role]!} selected>${bindings[role]} (${this.t('not_available')})</option>` : nothing}
-                ${this.options(role).map((entity) => html`<option value=${entity} ?selected=${bindings[role] === entity}>${this.currentHass?.states[entity]?.attributes.friendly_name ?? entity} (${entity})</option>`)}
+                ${bindings[role] && !options.get(role)!.includes(bindings[role]!) ? html`<option value=${bindings[role]!} selected>${bindings[role]} (${this.t('not_available')})</option>` : nothing}
+                ${options.get(role)!.map((entity) => html`<option value=${entity} ?selected=${bindings[role] === entity}>${this.currentHass?.states[entity]?.attributes.friendly_name ?? entity} (${entity})</option>`)}
               </select></label
             >`,
         )}
@@ -294,7 +352,36 @@ export class FlameConnectCardEditor extends LitElement {
             >`,
         )}
       </fieldset>
-      ${this.orderControls()} ${this.backgroundControl()}
+      <label
+        >${this.t('initial_view')}<select
+          aria-label=${this.t('initial_view')}
+          .value=${String(this.config.initial_view ?? 'expanded')}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              initial_view: (event.currentTarget as HTMLSelectElement).value,
+            };
+            this.emit();
+          }}
+        >
+          <option value="compact">${this.t('compact')}</option>
+          <option value="expanded">${this.t('expanded')}</option>
+        </select></label
+      >
+      <label class="check"
+        ><input
+          type="checkbox"
+          .checked=${this.config.compact_image === true}
+          @change=${(event: Event) => {
+            this.config = {
+              ...this.config,
+              compact_image: (event.currentTarget as HTMLInputElement).checked,
+            };
+            this.emit();
+          }}
+        />${this.t('compact_image')}</label
+      >
+      ${this.compactControls()} ${this.orderControls()} ${this.backgroundControl()}
       <p class="hint">${this.t('power_hint')}</p>
       <details>
         <summary>${this.t('show_image')}</summary>

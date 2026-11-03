@@ -14,11 +14,15 @@ const paths = {
   brightness:
     'M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1 1 M18 18l1 1 M5 19l1-1 M18 6l1-1 M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   speed: 'M4 18a9 9 0 1 1 16 0 M12 14l5-7 M6 11l1 1 M12 5v2 M18 11l-1 1',
+  expand: 'M5 9l7 7 7-7',
+  collapse: 'M5 15l7-7 7 7',
   pending: 'M12 8v4l3 2 M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
   unavailable: 'M12 3L2 21h20z M12 9v5 M12 17h.01',
 } as const;
 
-export function icon(name: keyof typeof paths) {
+export type IconName = keyof typeof paths;
+
+export function icon(name: IconName) {
   return html`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     ${svg`<path d=${paths[name]} />`}
   </svg>`;

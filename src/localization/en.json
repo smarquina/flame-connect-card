@@ -80,5 +80,14 @@
   "background_none": "None (transparent)",
   "background_color": "Background color",
   "speed": "Flame speed",
-  "show_speed": "Show flame speed"
+  "show_speed": "Show flame speed",
+  "expand": "Expand controls",
+  "collapse": "Collapse controls",
+  "initial_view": "Initial view",
+  "compact": "Compact",
+  "expanded": "Expanded",
+  "compact_image": "Show image in compact view",
+  "effect_status": "Flame and heating state",
+  "compact_controls": "Controls in compact view",
+  "refresh_discovery": "Refresh fireplaces"
 }

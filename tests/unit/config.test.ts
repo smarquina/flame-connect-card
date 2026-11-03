@@ -135,3 +135,29 @@ it('accepts a speed number binding and normalizes new and legacy order configura
     parseConfig({ ...config, control_order: ['speed', 'target', 'mode', 'color', 'brightness'] }),
   ).toThrow('control_order');
 });
+
+it.each([{ initial_view: 'wrong' }, { compact_image: 'true' }])(
+  'rejects invalid view configuration %j',
+  (changes) => {
+    expect(() => parseConfig({ ...config, ...changes })).toThrow();
+  },
+);
+
+it.each([null, {}, ['target', 'target'], ['unsupported']])(
+  'rejects invalid compact controls %j',
+  (compact_controls) => {
+    expect(() => parseConfig({ ...config, compact_controls })).toThrow('compact_controls');
+  },
+);
+it('normalizes compact view defaults and copies a compact subset', () => {
+  const compact_controls = ['target', 'ambient'];
+  const parsed = parseConfig({
+    ...config,
+    initial_view: 'compact',
+    compact_controls,
+    compact_image: true,
+  });
+  expect(parsed.compact_controls).toEqual(compact_controls);
+  expect(parsed.compact_controls).not.toBe(compact_controls);
+  expect(parsed.compact_image).toBe(true);
+});

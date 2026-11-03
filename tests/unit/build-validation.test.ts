@@ -96,15 +96,18 @@ it('package validation rejects a module without the four-state artwork', async (
     'supplied fireplace states',
   );
 });
-it.each(["import {html} from 'lit';", "import './missing.js';", "import('./editor.js');"])(
-  'package validation rejects an unresolved import: %s',
-  async (statement) => {
-    fixture.files['dist/flame-connect-card.js'] += statement;
-    await expect(import('../../scripts/check-package.mjs')).rejects.toThrow(
-      'external or missing module dependencies',
-    );
-  },
-);
+it.each([
+  "import {html} from 'lit';",
+  "import './missing.js';",
+  "import('./editor.js');",
+  "export * from '../missing.js';",
+  "import 'https://example.com/module.js';",
+])('package validation rejects an unresolved import: %s', async (statement) => {
+  fixture.files['dist/flame-connect-card.js'] += statement;
+  await expect(import('../../scripts/check-package.mjs')).rejects.toThrow(
+    'external or missing module dependencies',
+  );
+});
 it('package validation rejects an oversized artifact before it can be released', async () => {
   fixture.bundleSize = 2_500_000;
   await expect(import('../../scripts/check-package.mjs')).rejects.toThrow('below 2.5 MB');
@@ -113,4 +116,39 @@ it('package validation does not announce success when an input file is missing',
   delete fixture.files['package.json'];
   await expect(import('../../scripts/check-package.mjs')).rejects.toThrow('Missing file');
   expect(console.log).not.toHaveBeenCalled();
+});
+
+it.each([
+  "export { read } from '../adapters/read';",
+  "const load = () => import('../presentation/card');",
+  "const load = () => require('../adapters/read');",
+  "type View = import('../presentation/card').View;",
+  'const load = (name) => import(name);',
+  "import './models/../../../presentation/card';",
+])('architecture rejects a module dependency expressed as %s', async (source) => {
+  fixture.files['src/domain/state.ts'] = source;
+  await expect(import('../../scripts/check-architecture.mjs')).rejects.toThrow(
+    'forbidden inward dependency',
+  );
+});
+it('architecture accepts inward exports, type imports and dynamic imports while ignoring comments and strings', async () => {
+  fixture.files['src/domain/state.ts'] = `
+    // document, fetch and import('../adapters/read') are documentation only.
+    export { value } from './models/value';
+    export const description = 'window document localStorage fetch';
+    type Value = import('./models/value').Value;
+    const load = () => import('./models/value');
+    const common = require('./models/value');
+    export const plain = 1;
+  `;
+  fixture.files['src/application/commands.ts'] =
+    "import { command } from './other'; export { value };";
+  await import('../../scripts/check-architecture.mjs');
+  expect(console.log).toHaveBeenCalledWith('Architecture boundaries verified.');
+});
+
+it('allows local names and data properties resembling browser globals', async () => {
+  fixture.files['src/domain/state.ts'] =
+    'type Data = { fetch: number }; export function read(document: Data) { return document.fetch; }';
+  await import('../../scripts/check-architecture.mjs');
 });

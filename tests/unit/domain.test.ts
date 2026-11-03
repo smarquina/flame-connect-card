@@ -61,13 +61,7 @@ describe('commands preserve unrelated settings', () => {
     ),
   );
   it('rejects unavailable climate, target and ranges', () => {
-    for (const changes of [
-      { climateAvailable: false },
-      { target: null },
-      { minimum: null },
-      { maximum: null },
-      { step: null },
-    ])
+    for (const changes of [{ climateAvailable: false }, { target: null }])
       expect(() =>
         validateCommand({ ...state(), ...changes }, { kind: 'temperature', value: 22 }),
       ).toThrow('unavailable');
@@ -138,4 +132,43 @@ describe('flame speed commands', () => {
   it.each([NaN, Infinity, 0, 6, 2.5])('rejects invalid speed %s', (value) => {
     expect(() => validateCommand(speedState(), { kind: 'speed', value })).toThrow('invalid_value');
   });
+});
+
+it('validates numeric invariants for finite bounds, steps and values', async () => {
+  const { validNumericValue } = await import('../../src/domain/state');
+  for (const tuple of [
+    [NaN, 1, 5, 1],
+    [3, NaN, 5, 1],
+    [3, 1, Infinity, 1],
+    [3, 1, 5, NaN],
+    [3, 1, 5, 0],
+    [3, 5, 1, 1],
+    [0, 1, 5, 1],
+    [6, 1, 5, 1],
+    [2.5, 1, 5, 1],
+  ]) {
+    expect(validNumericValue(tuple[0]!, tuple[1]!, tuple[2]!, tuple[3]!)).toBe(false);
+  }
+  expect(validNumericValue(2.5, 1, 5, 0.5)).toBe(true);
+  expect(validNumericValue(3, 3, 3, 1)).toBe(true);
+});
+
+it('does not confirm enabling an effect from retained flags while whole-device power is off', () => {
+  const standby = { ...state(), power: false, flame: true, heating: true };
+  for (const kind of ['flame', 'heating'] as const) {
+    expect(isConfirmed(standby, { kind, value: true })).toBe(false);
+    expect(isConfirmed(standby, { kind, value: false })).toBe(true);
+  }
+  expect(isConfirmed({ ...standby, power: true }, { kind: 'heating', value: true })).toBe(true);
+});
+
+it('uses target bounds for validation and distinguishes adjacent fine steps', () => {
+  const snapshot = state();
+  snapshot.target = { value: 20, unit: '°C', minimum: 20, maximum: 21, step: 0.005 };
+  expect(() => validateCommand(snapshot, { kind: 'temperature', value: 20.005 })).not.toThrow();
+  expect(isConfirmed(snapshot, { kind: 'temperature', value: 20.005 })).toBe(false);
+  expect(isConfirmed(snapshot, { kind: 'temperature', value: 20 })).toBe(true);
+  expect(() => validateCommand(snapshot, { kind: 'temperature', value: 22 })).toThrow(
+    'invalid_value',
+  );
 });

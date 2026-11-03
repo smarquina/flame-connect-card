@@ -12,7 +12,9 @@
 - `presentation`: Lit card, visual editor, styles and localization.
 - `composition`: constructs the application controller and HA action adapter.
 
-The architecture check rejects outward imports from the core. Coverage checks require 100% of lines, statements, branches and functions across the TypeScript source and validation scripts, without coverage-ignore annotations. Browser tests separately verify the complete rendered interface and visual editor. SonarQube consumes the LCOV report.
+The architecture check parses TypeScript syntax and checks resolved relative dependency boundaries for imports, re-exports, import types, dynamic imports and CommonJS calls. Nonliteral module loads are rejected in the core; comments and string content do not count as imports or browser access. Coverage checks require 100% of lines, statements, branches and functions across the TypeScript source and validation scripts, without coverage-ignore annotations. Browser tests separately verify the complete rendered interface and visual editor. SonarQube consumes the LCOV report.
+
+Home Assistant entity domains, discovery suffixes and editor labels share one boundary contract. Detail-control bindings share a domain-level registry for visibility and layout decisions. Card styles, reusable sliders and effect-state presentation are isolated from view and command orchestration. The embedded default artwork URL is prepared once; entity-state mapping is reused across presentation updates and refreshed on Home Assistant notifications or reconfiguration. Commands still validate against a fresh state mapping.
 
 ## Actions and state
 
@@ -28,7 +30,15 @@ The architecture check rejects outward imports from the core. Coverage checks re
 
 Every call targets the configured entity ID. The card sends no whole-device power action implicitly. Commands are serialized within each card and are never replayed automatically. An already satisfied command requires no call. Pending operations end on matching state, service failure, removal/reconfiguration or a 45-second deadline. Service acceptance alone does not settle a command. Raw provider errors are not displayed.
 
+Incoming target temperature and speed values obey the same finite-range and step rules as outgoing commands. Invalid readings are unavailable instead of displaying a value inconsistent with a native slider. Effective effect state consistently applies confirmed standby to status icons, buttons and command confirmation; retained raw effect flags cannot confirm enabling an effect while power is off.
+
 The backend remains responsible for its cloud read/modify/write serialization and the physical device's semantics. A configured power switch in standby takes precedence over retained effect flags in the illustration. Without that entity, effects-off is not interpreted as whole-device standby.
+
+## Layout lifecycle
+
+Compact and expanded presentations share one controller and one Home Assistant snapshot per render. Switching layouts updates local presentation state only. It does not reconfigure the card, dispose the controller, send a service call or replay a pending command. Expansion is instance-local rather than an entity or shared browser preference. Sections sizing uses automatic rows; masonry estimates distinguish compact and expanded views and count only mapped, globally visible compact controls, plus the optional visible thumbnail.
+
+The standalone card needs no popup integration. A Mushroom summary plus Browser Mod popup can still host the existing expanded card; that dashboard composition is separate from the built-in layouts.
 
 ## Security and packaging
 
@@ -41,3 +51,11 @@ Distribution validation checks the filename, self-contained imports, artwork pre
 The project uses TypeScript strict checks, ESLint, formatting checks, dependency auditing, unit/contract tests, browser tests, automated accessibility checks, HACS validation and SonarQube Cloud. Applicable principles of HA's quality scale guide design; this frontend plugin does not claim an official integration-quality tier. Hassfest is a Python integration validator and does not validate this dashboard card.
 
 Documentation and build requirements are independent of runtime HA compatibility. A successful simulated test does not prove account access, physical heat output or every model-specific color option.
+
+Numeric target readings include their validated bounds and step, like flame speed. Target bounds and step have a single source in the target setting; unavailable targets use a disabled placeholder slider. Slider labels account for the minimum offset and fractional steps, including scientific notation. Temperature confirmation tolerance is capped below half a step. Static card and editor translation keys use the typed translation entry point; external provider options retain flexible lookup.
+
+Discovery requests expire after 15 seconds, allowing explicit retry without accepting late responses. Heating actions require climate availability even when whole-device standby supplies the effective off state. Distribution checks parse JavaScript imports and re-exports, rejecting external module dependencies independently of their path.
+
+Removing the editor clears its discovery deadline and invalidates pending results.
+
+Discovery prefers the climate label over the flame label and sorts devices by name and ID, independently of registry order. Configuration errors expose a stable code and field; the editor displays its localized error heading and the affected field without raw parser details. Architecture checks resolve local symbols to distinguish browser globals from local declarations and data properties.

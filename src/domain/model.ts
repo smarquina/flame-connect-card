@@ -32,6 +32,9 @@ export interface CardConfig extends Record<VisibilityOption, boolean> {
   entities: Bindings;
   control_order: DetailControl[];
   image_background: string;
+  initial_view: 'compact' | 'expanded';
+  compact_image: boolean;
+  compact_controls: DetailControl[];
   images: Partial<Record<Exclude<VisualState, 'unknown'>, string>>;
 }
 export interface Choice {
@@ -58,11 +61,8 @@ export interface FireplaceState {
   climateAvailable: boolean;
   mode: string | null;
   modes: readonly string[];
-  target: Temperature | null;
+  target: (Temperature & NumericSetting) | null;
   ambient: Temperature | null;
-  minimum: number | null;
-  maximum: number | null;
-  step: number | null;
   color: Choice;
   brightness: Choice;
 }
