@@ -270,7 +270,7 @@ it('editor validates images and incomplete mappings without executing actions', 
   change(images[0]!, '');
   change(select(element, 'Flame'), '');
   await element.updateComplete;
-  expect(text(element)).toContain('select a flame or climate');
+  expect(text(element)).toContain('Invalid configuration: entities');
   element.setConfig(null);
   expect(hass.callService).not.toHaveBeenCalled();
 });
@@ -361,7 +361,7 @@ it('does not trust change events from disabled temperature and option controls',
   expect(input(element).disabled).toBe(true);
   change(input(element), '22');
   await vi.waitFor(() => expect(text(element)).toContain('This control is unavailable'));
-  expect(input(element).value).toBe('15');
+  expect(input(element).value).toBe('0');
   change(select(element, 'Heating / fan mode'), 'eco');
   await element.updateComplete;
   change(select(element, 'Flame color'), 'blue');
@@ -834,4 +834,14 @@ it('preserves quarter-degree slider readings', async () => {
   hass.states['climate.fire_heating']!.attributes.temperature = 20.25;
   const element = await card(hass);
   expect(text(element)).toContain('20.25 °C');
+});
+
+it('clears discovery deadlines on disconnect', async () => {
+  vi.useFakeTimers();
+  const hass = fakeHass();
+  hass.callWS = vi.fn().mockImplementation(() => new Promise(() => {}));
+  const element = await editor(hass);
+  expect(vi.getTimerCount()).toBe(1);
+  element.remove();
+  expect(vi.getTimerCount()).toBe(0);
 });

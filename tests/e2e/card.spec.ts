@@ -216,7 +216,7 @@ test('editor supports registry discovery, external sensors and safe image config
     .getByRole('textbox', { name: 'Image: effects off', exact: true })
     .fill('https://untrusted.test/test.png');
   await editor.getByRole('textbox', { name: 'Image: effects off', exact: true }).press('Tab');
-  await expect(editor.getByRole('alert')).toContainText('same-origin');
+  await expect(editor.getByRole('alert')).toContainText('Invalid configuration: images');
 });
 
 test('supports keyboard navigation, responsive layout and accessible controls', async ({

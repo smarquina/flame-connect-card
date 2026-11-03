@@ -9,11 +9,8 @@ describe('Home Assistant state contract', () => {
   it('reads distinct room and target temperatures', () => {
     expect(mapState(config, fakeHass())).toMatchObject({
       name: 'Living room',
-      target: { value: 22, unit: '°C' },
+      target: { value: 22, unit: '°C', minimum: 15, maximum: 30, step: 0.5 },
       ambient: { value: 19.5, unit: '°C' },
-      minimum: 15,
-      maximum: 30,
-      step: 0.5,
       climateAvailable: true,
     });
   });
@@ -69,9 +66,6 @@ describe('Home Assistant state contract', () => {
       mode: null,
       modes: ['normal'],
       target: null,
-      minimum: null,
-      maximum: null,
-      step: null,
     });
     delete hass.states['climate.fire_heating'];
     expect(mapState(config, hass).climateAvailable).toBe(false);
@@ -299,4 +293,41 @@ it('does not expose an off-step flame speed as a confirmed slider value', () => 
     mapState({ ...config, entities: { ...config.entities, speed: 'number.fire_speed' } }, hass)
       .speed?.value,
   ).toBe(2.5);
+});
+
+it('discovers stable device labels and ordering independently of registry order', async () => {
+  const hass = fakeHass();
+  const entries: RegistryEntry[] = [
+    {
+      entity_id: 'light.fire_flame',
+      unique_id: 'a_flame',
+      platform: 'flame_connect',
+      device_id: 'a',
+      disabled_by: null,
+    },
+    {
+      entity_id: 'climate.fire_heating',
+      unique_id: 'a_heating',
+      platform: 'flame_connect',
+      device_id: 'a',
+      disabled_by: null,
+    },
+    {
+      entity_id: 'light.other',
+      unique_id: 'b_flame',
+      platform: 'flame_connect',
+      device_id: 'b',
+      disabled_by: null,
+    },
+  ];
+  hass.states['light.other'] = {
+    entity_id: 'light.other',
+    state: 'on',
+    attributes: { friendly_name: hass.states['climate.fire_heating']!.attributes.friendly_name },
+  };
+  hass.callWS = vi.fn().mockResolvedValue(entries);
+  const first = await discover(hass);
+  hass.callWS = vi.fn().mockResolvedValue([...entries].reverse());
+  expect(await discover(hass)).toEqual(first);
+  expect(first.map((device) => device.id)).toEqual(['a', 'b']);
 });

@@ -52,6 +52,10 @@ The project uses TypeScript strict checks, ESLint, formatting checks, dependency
 
 Documentation and build requirements are independent of runtime HA compatibility. A successful simulated test does not prove account access, physical heat output or every model-specific color option.
 
-Numeric target readings include their validated bounds and step, like flame speed. Legacy range fields remain available for unavailable-slider rendering. Slider labels preserve the precision of fractional steps. Static translation keys can use the typed translation entry point; external provider options retain flexible lookup.
+Numeric target readings include their validated bounds and step, like flame speed. Target bounds and step have a single source in the target setting; unavailable targets use a disabled placeholder slider. Slider labels account for the minimum offset and fractional steps, including scientific notation. Temperature confirmation tolerance is capped below half a step. Static card and editor translation keys use the typed translation entry point; external provider options retain flexible lookup.
 
 Discovery requests expire after 15 seconds, allowing explicit retry without accepting late responses. Heating actions require climate availability even when whole-device standby supplies the effective off state. Distribution checks parse JavaScript imports and re-exports, rejecting external module dependencies independently of their path.
+
+Removing the editor clears its discovery deadline and invalidates pending results.
+
+Discovery prefers the climate label over the flame label and sorts devices by name and ID, independently of registry order. Configuration errors expose a stable code and field; the editor displays its localized error heading and the affected field without raw parser details. Architecture checks resolve local symbols to distinguish browser globals from local declarations and data properties.

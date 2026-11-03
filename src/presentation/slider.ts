@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
-import { numberText } from '../localization/localize';
+import { numberText, sliderPrecision } from '../localization/localize';
 import { icon } from './icons';
 
 interface SliderOptions {
@@ -39,11 +39,7 @@ export function renderSlider({
   const value = confirmed ?? minimum;
   const fill = sliderFill(value, minimum, maximum);
   const format = (number: number) =>
-    numberText(
-      language,
-      number,
-      Math.min(20, Math.max(1, String(step).split('.')[1]?.length ?? 0)),
-    ) + (unit ? ' ' + unit : '');
+    numberText(language, number, sliderPrecision(minimum, step ?? 1)) + (unit ? ' ' + unit : '');
   const reading = confirmed === null ? '—' : format(confirmed);
   return html`<div class="slider-row">
     <label class="slider-label" for=${kind} title=${label}>

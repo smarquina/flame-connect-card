@@ -117,7 +117,6 @@ export function mapState(config: CardConfig, hass: HomeAssistant): FireplaceStat
           }
         : null,
     ambient: ambientReading(get('ambient'), nativeUnit),
-    ...range,
     color: choice(get('color')),
     brightness: choice(get('brightness')),
   };

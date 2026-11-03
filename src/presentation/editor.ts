@@ -8,13 +8,20 @@ import {
   type CardConfig,
   type EntityRole,
 } from '../domain/model';
-import { parseConfig, parseControlOrder, parseImageBackground } from '../configuration/config';
+import {
+  ConfigurationError,
+  parseConfig,
+  parseControlOrder,
+  parseImageBackground,
+} from '../configuration/config';
 import { discover, type DiscoveredFireplace } from '../adapters/home-assistant/discovery';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
-import { localize } from '../localization/localize';
+import { translate, type TranslationKey } from '../localization/localize';
 import { sharedStyles } from './styles';
 
 import { ENTITY_CONTRACTS, ENTITY_ROLES } from '../configuration/entity-contracts';
+
+export const DISCOVERY_TIMEOUT_MS = 15_000;
 
 export class FlameConnectCardEditor extends LitElement {
   static readonly styles = [
@@ -64,6 +71,7 @@ export class FlameConnectCardEditor extends LitElement {
   private fireplaces: DiscoveredFireplace[] = [];
   private discoveryState: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
   private discoveryGeneration = 0;
+  private discoveryTimer?: ReturnType<typeof setTimeout>;
   private error = '';
   set hass(value: HomeAssistant) {
     this.currentHass = value;
@@ -73,6 +81,8 @@ export class FlameConnectCardEditor extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.discoveryGeneration++;
+    clearTimeout(this.discoveryTimer);
+    this.discoveryTimer = undefined;
     this.discoveryState = 'idle';
   }
   private async refreshDiscovery(): Promise<void> {
@@ -85,7 +95,8 @@ export class FlameConnectCardEditor extends LitElement {
       const devices = await Promise.race([
         discover(this.currentHass),
         new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error('Discovery timeout')), 15_000);
+          timer = setTimeout(() => reject(new Error('Discovery timeout')), DISCOVERY_TIMEOUT_MS);
+          this.discoveryTimer = timer;
         }),
       ]).finally(() => clearTimeout(timer));
       if (generation !== this.discoveryGeneration) return;
@@ -94,7 +105,10 @@ export class FlameConnectCardEditor extends LitElement {
     } catch {
       if (generation === this.discoveryGeneration) this.discoveryState = 'error';
     } finally {
-      if (generation === this.discoveryGeneration) this.requestUpdate();
+      if (generation === this.discoveryGeneration) {
+        this.discoveryTimer = undefined;
+        this.requestUpdate();
+      }
     }
   }
   setConfig(value: unknown): void {
@@ -102,8 +116,8 @@ export class FlameConnectCardEditor extends LitElement {
       this.config = structuredClone(value as Record<string, unknown>);
     this.requestUpdate();
   }
-  private t(key: string): string {
-    return localize(this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en', key);
+  private t(key: TranslationKey): string {
+    return translate(this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en', key);
   }
   private bindings(): CardConfig['entities'] {
     return (this.config.entities as CardConfig['entities']) ?? {};
@@ -116,7 +130,7 @@ export class FlameConnectCardEditor extends LitElement {
         new CustomEvent('config-changed', { detail: { config }, bubbles: true, composed: true }),
       );
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Invalid configuration';
+      this.error = error instanceof ConfigurationError ? error.field : 'configuration';
     }
     this.requestUpdate();
   }

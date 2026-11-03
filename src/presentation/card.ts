@@ -11,11 +11,12 @@ import {
   type EntityRole,
   type DetailControl,
   type VisibilityOption,
+  type ErrorCode,
 } from '../domain/model';
 import { visualState, visibleModes } from '../domain/state';
 import { mapState } from '../adapters/home-assistant/state-mapper';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
-import { localize, numberText, translate } from '../localization/localize';
+import { localize, numberText, translate, type TranslationKey } from '../localization/localize';
 import { composeController } from '../composition';
 import type { FireplaceController } from '../application/controller';
 import { visibleControl } from '../domain/controls';
@@ -39,7 +40,7 @@ export class FlameConnectCard extends LitElement {
   private currentHass?: HomeAssistant;
   private mappedState?: FireplaceState;
   private controller?: FireplaceController;
-  private error = '';
+  private error: ErrorCode | '' = '';
   private generation = 0;
   private expanded = true;
 
@@ -88,8 +89,8 @@ export class FlameConnectCard extends LitElement {
   private get language(): string {
     return this.currentHass?.locale?.language ?? this.currentHass?.language ?? 'en';
   }
-  private t(key: string): string {
-    return localize(this.language, key);
+  private t(key: TranslationKey): string {
+    return translate(this.language, key);
   }
   private get disabled(): boolean {
     return this.preview || this.controller?.busy === true;
@@ -125,7 +126,7 @@ export class FlameConnectCard extends LitElement {
     const options = kind === 'mode' ? visibleModes(state) : state[kind].options;
     const current = kind === 'mode' ? state.mode : state[kind].value;
     const enabled = kind === 'mode' ? state.climateAvailable : state[kind].available;
-    const placeholder = current ? this.t(current) : this.t('select');
+    const placeholder = current ? localize(this.language, current) : this.t('select');
     return html`<label class="control-label" title=${this.t(kind)}
       >${icon(kind)}<span class="sr-only">${this.t(kind)}</span
       ><select
@@ -135,11 +136,11 @@ export class FlameConnectCard extends LitElement {
         @change=${(event: Event) => this.choose(kind, event, current)}
       >
         ${!current || !options.includes(current) ? html`<option value=${current ?? ''}>${placeholder}</option>` : nothing}
-        ${options.map((option) => html`<option value=${option} ?selected=${current === option}>${this.t(option)}</option>`)}
+        ${options.map((option) => html`<option value=${option} ?selected=${current === option}>${localize(this.language, option)}</option>`)}
       </select></label
     >`;
   }
-  private status(state: FireplaceState): string {
+  private status(state: FireplaceState): TranslationKey {
     if (state.power === false) return 'standby_label';
     const visual = visualState(state);
     if (visual === 'unknown') return 'state_unknown';
@@ -189,9 +190,9 @@ export class FlameConnectCard extends LitElement {
     return this.sliderControl(
       'target',
       state.target?.value ?? null,
-      state.target?.minimum ?? state.minimum,
-      state.target?.maximum ?? state.maximum,
-      state.target?.step ?? state.step,
+      state.target?.minimum ?? null,
+      state.target?.maximum ?? null,
+      state.target?.step ?? null,
       state.target?.unit ?? '',
     );
   }

@@ -12,7 +12,9 @@ export interface DiscoveredFireplace {
 export async function discover(hass: HomeAssistant): Promise<DiscoveredFireplace[]> {
   const entries = await hass.callWS<RegistryEntry[]>({ type: 'config/entity_registry/list' });
   const devices = new Map<string, DiscoveredFireplace>();
-  for (const entry of entries) {
+  for (const entry of [...entries].sort((left, right) =>
+    left.entity_id.localeCompare(right.entity_id, 'en'),
+  )) {
     if (entry.platform !== 'flame_connect' || !entry.device_id || entry.disabled_by) continue;
     const role = ENTITY_ROLES.find((key) => {
       const { suffix, domain } = ENTITY_CONTRACTS[key];
@@ -29,11 +31,16 @@ export async function discover(hass: HomeAssistant): Promise<DiscoveredFireplace
       entities: {},
     };
     device.entities[role] = entry.entity_id;
-    if (role === 'climate' || role === 'flame') {
+    if (role === 'climate' || (role === 'flame' && !device.entities.climate)) {
       const name = hass.states[entry.entity_id]?.attributes.friendly_name;
       if (typeof name === 'string') device.name = name;
     }
     devices.set(entry.device_id, device);
   }
-  return [...devices.values()].filter((device) => device.entities.flame || device.entities.climate);
+  return [...devices.values()]
+    .filter((device) => device.entities.flame || device.entities.climate)
+    .sort(
+      (left, right) =>
+        left.name.localeCompare(right.name, 'en') || left.id.localeCompare(right.id, 'en'),
+    );
 }

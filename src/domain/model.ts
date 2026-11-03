@@ -63,9 +63,6 @@ export interface FireplaceState {
   modes: readonly string[];
   target: (Temperature & NumericSetting) | null;
   ambient: Temperature | null;
-  minimum: number | null;
-  maximum: number | null;
-  step: number | null;
   color: Choice;
   brightness: Choice;
 }

@@ -45,16 +45,9 @@ export function visibleModes(state: FireplaceState): string[] {
 }
 
 function validateTemperature(state: FireplaceState, value: number): void {
-  if (
-    !state.climateAvailable ||
-    !state.target ||
-    state.minimum === null ||
-    state.maximum === null ||
-    state.step === null
-  )
-    throw new ControlError('unavailable');
-  if (!validNumericValue(value, state.minimum, state.maximum, state.step))
-    throw new ControlError('invalid_value');
+  if (!state.climateAvailable || !state.target) throw new ControlError('unavailable');
+  const { minimum, maximum, step } = state.target;
+  if (!validNumericValue(value, minimum, maximum, step)) throw new ControlError('invalid_value');
 }
 
 function validateSpeed(state: FireplaceState, value: number): void {
@@ -103,7 +96,8 @@ export function isConfirmed(state: FireplaceState, command: Command): boolean {
     case 'temperature':
       return (
         state.target !== null &&
-        Math.abs(state.target.value - command.value) < TEMPERATURE_CONFIRMATION_TOLERANCE
+        Math.abs(state.target.value - command.value) <
+          Math.min(TEMPERATURE_CONFIRMATION_TOLERANCE, state.target.step / 2)
       );
     case 'mode':
       return state.mode === command.value && state.climateAvailable;

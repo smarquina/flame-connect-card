@@ -1,9 +1,9 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import ts from 'typescript';
+import { noBrowserGlobals } from './core-globals.mjs';
 
 const CORE_ROOTS = ['src/domain', 'src/application'];
-const BROWSER_GLOBALS = new Set(['window', 'document', 'localStorage', 'fetch']);
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)],
@@ -36,6 +36,7 @@ for (const directory of CORE_ROOTS) {
       ts.ScriptTarget.Latest,
       true,
     );
+    noBrowserGlobals(file, source);
     function visit(node) {
       const argument = moduleArgument(node);
       if (argument) {
@@ -43,8 +44,7 @@ for (const directory of CORE_ROOTS) {
           throw new Error(`${file}: forbidden inward dependency: nonliteral module`);
         checkDependency(file, directory, argument.text);
       }
-      if (ts.isIdentifier(node) && BROWSER_GLOBALS.has(node.text))
-        throw new Error(`${file}: browser dependency in core`);
+
       ts.forEachChild(node, visit);
     }
     visit(source);
