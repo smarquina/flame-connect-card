@@ -61,7 +61,7 @@ export interface FireplaceState {
   climateAvailable: boolean;
   mode: string | null;
   modes: readonly string[];
-  target: Temperature | null;
+  target: (Temperature & NumericSetting) | null;
   ambient: Temperature | null;
   minimum: number | null;
   maximum: number | null;

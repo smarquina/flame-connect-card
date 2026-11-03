@@ -38,7 +38,12 @@ export function renderSlider({
   const maximum = upper ?? minimum;
   const value = confirmed ?? minimum;
   const fill = sliderFill(value, minimum, maximum);
-  const format = (number: number) => numberText(language, number) + (unit ? ' ' + unit : '');
+  const format = (number: number) =>
+    numberText(
+      language,
+      number,
+      Math.min(20, Math.max(1, String(step).split('.')[1]?.length ?? 0)),
+    ) + (unit ? ' ' + unit : '');
   const reading = confirmed === null ? '—' : format(confirmed);
   return html`<div class="slider-row">
     <label class="slider-label" for=${kind} title=${label}>

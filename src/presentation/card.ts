@@ -15,7 +15,7 @@ import {
 import { visualState, visibleModes } from '../domain/state';
 import { mapState } from '../adapters/home-assistant/state-mapper';
 import type { HomeAssistant } from '../adapters/home-assistant/types';
-import { localize, numberText } from '../localization/localize';
+import { localize, numberText, translate } from '../localization/localize';
 import { composeController } from '../composition';
 import type { FireplaceController } from '../application/controller';
 import { visibleControl } from '../domain/controls';
@@ -179,7 +179,7 @@ export class FlameConnectCard extends LitElement {
       aria-label=${text}
       title=${text}
       aria-pressed=${String(value === true)}
-      ?disabled=${this.disabled || unavailable || standby}
+      ?disabled=${this.disabled || unavailable || standby || (kind === 'heating' && !state.climateAvailable)}
       @click=${() => this.run({ kind, value: !value })}
     >
       ${icon(effect.icon)}
@@ -189,9 +189,9 @@ export class FlameConnectCard extends LitElement {
     return this.sliderControl(
       'target',
       state.target?.value ?? null,
-      state.minimum,
-      state.maximum,
-      state.step,
+      state.target?.minimum ?? state.minimum,
+      state.target?.maximum ?? state.maximum,
+      state.target?.step ?? state.step,
       state.target?.unit ?? '',
     );
   }
@@ -221,7 +221,7 @@ export class FlameConnectCard extends LitElement {
       step,
       unit,
       language: this.language,
-      label: this.t(kind),
+      label: translate(this.language, kind),
       disabled: this.disabled,
       commit: (value) => {
         void this.run({ kind: kind === 'target' ? 'temperature' : 'speed', value });

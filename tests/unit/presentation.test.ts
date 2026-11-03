@@ -226,6 +226,11 @@ it('editor loads once, emits valid explicit mappings and preserves the external 
   const emitted = vi.fn();
   element.addEventListener('config-changed', emitted);
   change(select(element, 'Choose a Flame Connect fireplace'), '');
+  await vi.waitFor(() =>
+    expect(
+      select(element, 'Choose a Flame Connect fireplace').querySelector('option[value="device"]'),
+    ).not.toBeNull(),
+  );
   change(select(element, 'Choose a Flame Connect fireplace'), 'device');
   await element.updateComplete;
   expect((emitted.mock.calls[0]![0] as CustomEvent).detail.config.entities).toEqual({
@@ -303,6 +308,11 @@ it('renders the editor before HA context exists and ignores non-object configura
   await element.updateComplete;
   await Promise.resolve();
   await element.updateComplete;
+  await vi.waitFor(() =>
+    expect(
+      select(element, 'Choose a Flame Connect fireplace').querySelector('option[value="device"]'),
+    ).not.toBeNull(),
+  );
   change(select(element, 'Choose a Flame Connect fireplace'), 'device');
   expect((emitted.mock.calls[0]![0] as CustomEvent).detail.config.entities).toEqual({
     flame: 'light.fire_flame',
@@ -798,4 +808,30 @@ it('ignores refresh events before an editor has Home Assistant context', async (
   button(element, 'Refresh fireplaces').dispatchEvent(new Event('click'));
   await element.updateComplete;
   expect(button(element, 'Refresh fireplaces').disabled).toBe(true);
+});
+
+it('disables unavailable heating even in confirmed standby', async () => {
+  const hass = fakeHass();
+  hass.states['switch.fire_power']!.state = 'off';
+  hass.states['climate.fire_heating']!.state = 'unavailable';
+  const element = await card(hass);
+  expect(button(element, 'Heating').disabled).toBe(true);
+});
+it('recovers discovery after a request never settles', async () => {
+  vi.useFakeTimers();
+  const hass = fakeHass();
+  hass.callWS = vi.fn().mockImplementation(() => new Promise(() => {}));
+  const element = await editor(hass);
+  await vi.advanceTimersByTimeAsync(15_000);
+  await element.updateComplete;
+  expect(button(element, 'Refresh fireplaces').disabled).toBe(false);
+  expect(text(element)).toContain('Automatic discovery is unavailable');
+});
+
+it('preserves quarter-degree slider readings', async () => {
+  const hass = fakeHass();
+  hass.states['climate.fire_heating']!.attributes.target_temp_step = 0.25;
+  hass.states['climate.fire_heating']!.attributes.temperature = 20.25;
+  const element = await card(hass);
+  expect(text(element)).toContain('20.25 °C');
 });

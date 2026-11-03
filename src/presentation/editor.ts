@@ -81,7 +81,13 @@ export class FlameConnectCardEditor extends LitElement {
     this.discoveryState = 'loading';
     this.requestUpdate();
     try {
-      const devices = await discover(this.currentHass);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const devices = await Promise.race([
+        discover(this.currentHass),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Discovery timeout')), 15_000);
+        }),
+      ]).finally(() => clearTimeout(timer));
       if (generation !== this.discoveryGeneration) return;
       this.fireplaces = devices;
       this.discoveryState = 'ready';

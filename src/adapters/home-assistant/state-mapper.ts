@@ -108,7 +108,13 @@ export function mapState(config: CardConfig, hass: HomeAssistant): FireplaceStat
     modes: strings(attr.preset_modes),
     target:
       climateAvailable && validTarget && targetValue !== null && nativeUnit
-        ? { value: targetValue, unit: nativeUnit }
+        ? {
+            value: targetValue,
+            unit: nativeUnit,
+            minimum: range.minimum!,
+            maximum: range.maximum!,
+            step: range.step!,
+          }
         : null,
     ambient: ambientReading(get('ambient'), nativeUnit),
     ...range,

@@ -828,7 +828,10 @@ function Z(e, t) {
 		modes: X(a.preset_modes),
 		target: o && u && c !== null && s ? {
 			value: c,
-			unit: s
+			unit: s,
+			minimum: l.minimum,
+			maximum: l.maximum,
+			step: l.step
 		} : null,
 		ambient: it(n("ambient"), s),
 		...l,
@@ -1023,18 +1026,21 @@ var ct = {
 };
 // src/localization/localize.ts
 function ut(e, t) {
+	return dt(e, t);
+}
+function dt(e, t) {
 	let n = e.toLowerCase().startsWith("es") ? lt : ct, r = (e) => Object.hasOwn(n, e) ? n[e] : void 0;
 	return r(t) ?? t.split("_").map((e) => r(e) ?? e).join(" + ");
 }
-function dt(e, t) {
+function ft(e, t, n = 1) {
 	try {
-		return new Intl.NumberFormat(e, { maximumFractionDigits: 1 }).format(t);
+		return new Intl.NumberFormat(e, { maximumFractionDigits: n }).format(t);
 	} catch {
-		return new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(t);
+		return new Intl.NumberFormat("en", { maximumFractionDigits: n }).format(t);
 	}
 }
 // src/application/controller.ts
-var ft = class {
+var pt = class {
 	constructor(e, t, n = Fe) {
 		this.gateway = e, this.changed = t, this.timeout = n;
 	}
@@ -1067,7 +1073,7 @@ var ft = class {
 	finish(e, t) {
 		this.pending === e && (clearTimeout(e.timer), this.pending = void 0, t ? e.reject(new U(t)) : e.resolve(), this.changed());
 	}
-}, pt = class {
+}, mt = class {
 	constructor(e, t) {
 		this.getHass = e, this.entities = t;
 	}
@@ -1101,11 +1107,11 @@ var ft = class {
 	}
 };
 // src/composition.ts
-function mt(e, t, n) {
-	return new ft(new pt(e, t), n);
+function ht(e, t, n) {
+	return new pt(new mt(e, t), n);
 }
 // src/domain/controls.ts
-var ht = {
+var gt = {
 	ambient: "ambient",
 	target: "climate",
 	mode: "climate",
@@ -1113,11 +1119,11 @@ var ht = {
 	brightness: "brightness",
 	speed: "speed"
 };
-function gt(e, t) {
-	return e[`show_${t}`] && !!e.entities[ht[t]];
+function _t(e, t) {
+	return e[`show_${t}`] && !!e.entities[gt[t]];
 }
 // src/presentation/card-styles.ts
-var _t = o`
+var vt = o`
   ha-card {
     display: block;
     overflow: hidden;
@@ -1337,7 +1343,7 @@ var _t = o`
       grid-template-columns: 1fr;
     }
   }
-`, vt = o`
+`, yt = o`
   :host {
     display: block;
     color: var(--primary-text-color, #202020);
@@ -1400,7 +1406,7 @@ var _t = o`
     font-size: 0.9rem;
     line-height: 1.4;
   }
-`, yt = {
+`, bt = {
 	power_on: "M8 5l11 7-11 7z",
 	power_off: "M12 3v9 M6.3 5.8a9 9 0 1 0 11.4 0",
 	flame: "M12 3c1 5 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 3 1 4 2 4 2-3 2-6 1-10z",
@@ -1418,16 +1424,16 @@ var _t = o`
 };
 function Q(e) {
 	return A`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    ${ge`<path d=${yt[e]} />`}
+    ${ge`<path d=${bt[e]} />`}
   </svg>`;
 }
 // src/presentation/slider.ts
-function bt(e, t, n) {
+function xt(e, t, n) {
 	let r = n > t ? (e - t) / (n - t) : 0;
 	return `${Math.max(0, Math.min(1, r)) * 100}%`;
 }
-function xt({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, language: o, label: s, disabled: c, commit: l }) {
-	let u = t !== null && n !== null && r !== null && i !== null && r > n, d = n ?? 0, f = r ?? d, p = t ?? d, m = bt(p, d, f), h = (e) => dt(o, e) + (a ? " " + a : ""), g = t === null ? "—" : h(t);
+function St({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, language: o, label: s, disabled: c, commit: l }) {
+	let u = t !== null && n !== null && r !== null && i !== null && r > n, d = n ?? 0, f = r ?? d, p = t ?? d, m = xt(p, d, f), h = (e) => ft(o, e, Math.min(20, Math.max(1, String(i).split(".")[1]?.length ?? 0))) + (a ? " " + a : ""), g = t === null ? "—" : h(t);
 	return A`<div class="slider-row">
     <label class="slider-label" for=${e} title=${s}>
       ${Q(e)}<span class="sr-only">${s}</span>
@@ -1446,7 +1452,7 @@ function xt({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, langu
       ?disabled=${c || !u}
       @input=${(e) => {
 		let t = e.currentTarget;
-		t.style.setProperty("--fill", bt(t.valueAsNumber, d, f)), t.setAttribute("aria-valuetext", h(t.valueAsNumber));
+		t.style.setProperty("--fill", xt(t.valueAsNumber, d, f)), t.setAttribute("aria-valuetext", h(t.valueAsNumber));
 	}}
       @change=${(e) => {
 		let t = e.currentTarget;
@@ -1456,7 +1462,7 @@ function xt({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, langu
   </div>`;
 }
 // src/presentation/effect-state.ts
-function St(e, t) {
+function Ct(e, t) {
 	let n = Ge(e, t), r = t === "heating" && e.mode === "fan_only" ? "ventilation" : t, i = "not_available";
 	return n !== null && (i = n ? "on" : "off"), {
 		value: n,
@@ -1467,7 +1473,7 @@ function St(e, t) {
 	};
 }
 // src/adapters/home-assistant/discovery.ts
-async function Ct(e) {
+async function wt(e) {
 	let t = await e.callWS({ type: "config/entity_registry/list" }), n = /* @__PURE__ */ new Map();
 	for (let r of t) {
 		if (r.platform !== "flame_connect" || !r.device_id || r.disabled_by) continue;
@@ -1490,7 +1496,7 @@ async function Ct(e) {
 	return [...n.values()].filter((e) => e.entities.flame || e.entities.climate);
 }
 // src/presentation/editor.ts
-var wt = class extends z {
+var Tt = class extends z {
 	constructor(...e) {
 		super(...e), this.config = {
 			type: B,
@@ -1499,7 +1505,7 @@ var wt = class extends z {
 		}, this.fireplaces = [], this.discoveryState = "idle", this.discoveryGeneration = 0, this.error = "";
 	}
 	static {
-		this.styles = [vt, o`
+		this.styles = [yt, o`
       .editor {
         display: grid;
         gap: 16px;
@@ -1546,9 +1552,11 @@ var wt = class extends z {
 		let e = ++this.discoveryGeneration;
 		this.discoveryState = "loading", this.requestUpdate();
 		try {
-			let t = await Ct(this.currentHass);
+			let t, n = await Promise.race([wt(this.currentHass), new Promise((e, n) => {
+				t = setTimeout(() => n(/* @__PURE__ */ Error("Discovery timeout")), 15e3);
+			})]).finally(() => clearTimeout(t));
 			if (e !== this.discoveryGeneration) return;
-			this.fireplaces = t, this.discoveryState = "ready";
+			this.fireplaces = n, this.discoveryState = "ready";
 		} catch {
 			e === this.discoveryGeneration && (this.discoveryState = "error");
 		} finally {
@@ -1559,7 +1567,7 @@ var wt = class extends z {
 		e && typeof e == "object" && !Array.isArray(e) && (this.config = structuredClone(e)), this.requestUpdate();
 	}
 	t(e) {
-		return ut(this.currentHass?.locale?.language ?? this.currentHass?.language ?? "en", e);
+		return dt(this.currentHass?.locale?.language ?? this.currentHass?.language ?? "en", e);
 	}
 	bindings() {
 		return this.config.entities ?? {};
@@ -1814,9 +1822,9 @@ var wt = class extends z {
     </div>`;
 	}
 };
-customElements.get("flame-connect-card-editor") || customElements.define("flame-connect-card-editor", wt);
+customElements.get("flame-connect-card-editor") || customElements.define("flame-connect-card-editor", Tt);
 // src/presentation/card.ts
-var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At = class extends z {
+var Et = 8, Dt = 3, Ot = 2, kt = 2, At = "url(" + JSON.stringify(Pe) + ")", jt = class extends z {
 	constructor(...e) {
 		super(...e), this.preview = !1, this.error = "", this.generation = 0, this.expanded = !0;
 	}
@@ -1824,22 +1832,22 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 		this.properties = { preview: { type: Boolean } };
 	}
 	static {
-		this.styles = [vt, _t];
+		this.styles = [yt, vt];
 	}
 	set hass(e) {
 		this.currentHass = e, this.mappedState = this.config ? Z(this.config, e) : void 0, this.mappedState && this.controller?.update(this.mappedState), this.requestUpdate();
 	}
 	setConfig(e) {
 		let t = We(e);
-		this.generation++, this.controller?.dispose(), this.config = t, this.mappedState = this.currentHass ? Z(t, this.currentHass) : void 0, this.expanded = t.initial_view === "expanded", this.error = "", this.controller = mt(() => this.currentHass, t.entities, () => this.requestUpdate()), this.requestUpdate();
+		this.generation++, this.controller?.dispose(), this.config = t, this.mappedState = this.currentHass ? Z(t, this.currentHass) : void 0, this.expanded = t.initial_view === "expanded", this.error = "", this.controller = ht(() => this.currentHass, t.entities, () => this.requestUpdate()), this.requestUpdate();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.generation++, this.controller?.dispose();
 	}
 	getCardSize() {
-		if (this.expanded) return Tt;
-		let e = this.config, t = e.compact_controls.filter((t) => gt(e, t)).length, n = e.compact_image && e.show_image ? Ot : 0;
-		return Et + t * Dt + n;
+		if (this.expanded) return Et;
+		let e = this.config, t = e.compact_controls.filter((t) => _t(e, t)).length, n = e.compact_image && e.show_image ? kt : 0;
+		return Dt + t * Ot + n;
 	}
 	getGridOptions() {
 		return {
@@ -1861,7 +1869,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 		return this.currentHass?.locale?.language ?? this.currentHass?.language ?? "en";
 	}
 	t(e) {
-		return ut(this.language, e);
+		return dt(this.language, e);
 	}
 	get disabled() {
 		return this.preview || this.controller?.busy === !0;
@@ -1915,7 +1923,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 			heat: "0% 100%",
 			both: "100% 100%",
 			unknown: "0% 0%"
-		}, a = this.t(this.status(e)) + ". " + this.t("image_hint"), o = r ? "url(" + JSON.stringify(r) + ")" : kt, s = n === "unknown";
+		}, a = this.t(this.status(e)) + ". " + this.t("image_hint"), o = r ? "url(" + JSON.stringify(r) + ")" : At, s = n === "unknown";
 		return A`<div
       class="scene ${s ? "unknown" : ""}"
       role="img"
@@ -1931,12 +1939,12 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
     </div>`;
 	}
 	toggle(e, t) {
-		let n = St(e, t), { value: r } = n, i = r === null, a = this.t(n.label) + " · " + this.t(n.status), o = t === "flame" && e.power === !1 && !r;
+		let n = Ct(e, t), { value: r } = n, i = r === null, a = this.t(n.label) + " · " + this.t(n.status), o = t === "flame" && e.power === !1 && !r;
 		return A`<button
       aria-label=${a}
       title=${a}
       aria-pressed=${String(r === !0)}
-      ?disabled=${this.disabled || i || o}
+      ?disabled=${this.disabled || i || o || t === "heating" && !e.climateAvailable}
       @click=${() => this.run({
 			kind: t,
 			value: !r
@@ -1946,13 +1954,13 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
     </button>`;
 	}
 	targetControl(e) {
-		return this.sliderControl("target", e.target?.value ?? null, e.minimum, e.maximum, e.step, e.target?.unit ?? "");
+		return this.sliderControl("target", e.target?.value ?? null, e.target?.minimum ?? e.minimum, e.target?.maximum ?? e.maximum, e.target?.step ?? e.step, e.target?.unit ?? "");
 	}
 	speedControl(e) {
 		return this.sliderControl("speed", e.speed?.value ?? null, e.speed?.minimum ?? null, e.speed?.maximum ?? null, e.speed?.step ?? null, "");
 	}
 	sliderControl(e, t, n, r, i, a) {
-		return xt({
+		return St({
 			kind: e,
 			confirmed: t,
 			lower: n,
@@ -1960,7 +1968,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 			step: i,
 			unit: a,
 			language: this.language,
-			label: this.t(e),
+			label: ut(this.language, e),
 			disabled: this.disabled,
 			commit: (t) => {
 				this.run({
@@ -1974,7 +1982,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 		let t = "—";
 		if (e.ambient) {
 			let n = this.language;
-			t = dt(n, e.ambient.value) + " " + e.ambient.unit;
+			t = ft(n, e.ambient.value) + " " + e.ambient.unit;
 		}
 		return A`<div>
       <div class="reading-label" title=${this.t("ambient")}>
@@ -2001,7 +2009,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 		return e[t] && !!e.entities[n];
 	}
 	detailControl(e, t, n) {
-		return gt(t, n) ? A`<div data-control=${n}>${{
+		return _t(t, n) ? A`<div data-control=${n}>${{
 			ambient: () => this.ambientControl(e),
 			target: () => this.targetControl(e),
 			mode: () => this.selectControl(e, "mode"),
@@ -2015,7 +2023,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
       ${["flame", "heating"].map((n) => {
 			let r = n === "flame" ? "flame" : "climate";
 			if (!t.entities[r]) return M;
-			let i = St(e, n), a = this.t(i.label) + " · " + this.t(i.status);
+			let i = Ct(e, n), a = this.t(i.label) + " · " + this.t(i.status);
 			return A`<span
           role="status"
           data-status=${n}
@@ -2073,7 +2081,7 @@ var Tt = 8, Et = 3, Dt = 2, Ot = 2, kt = "url(" + JSON.stringify(Pe) + ")", At =
 	}
 };
 // src/index.ts
-customElements.get("flame-connect-card") || customElements.define("flame-connect-card", At);
+customElements.get("flame-connect-card") || customElements.define("flame-connect-card", jt);
 var $ = window;
 $.customCards ??= [], $.customCards.some((e) => e.type === "flame-connect-card") || $.customCards.push({
 	type: "flame-connect-card",

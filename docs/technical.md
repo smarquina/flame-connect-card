@@ -51,3 +51,7 @@ Distribution validation checks the filename, self-contained imports, artwork pre
 The project uses TypeScript strict checks, ESLint, formatting checks, dependency auditing, unit/contract tests, browser tests, automated accessibility checks, HACS validation and SonarQube Cloud. Applicable principles of HA's quality scale guide design; this frontend plugin does not claim an official integration-quality tier. Hassfest is a Python integration validator and does not validate this dashboard card.
 
 Documentation and build requirements are independent of runtime HA compatibility. A successful simulated test does not prove account access, physical heat output or every model-specific color option.
+
+Numeric target readings include their validated bounds and step, like flame speed. Legacy range fields remain available for unavailable-slider rendering. Slider labels preserve the precision of fractional steps. Static translation keys can use the typed translation entry point; external provider options retain flexible lookup.
+
+Discovery requests expire after 15 seconds, allowing explicit retry without accepting late responses. Heating actions require climate availability even when whole-device standby supplies the effective off state. Distribution checks parse JavaScript imports and re-exports, rejecting external module dependencies independently of their path.

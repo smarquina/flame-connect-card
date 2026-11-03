@@ -96,15 +96,18 @@ it('package validation rejects a module without the four-state artwork', async (
     'supplied fireplace states',
   );
 });
-it.each(["import {html} from 'lit';", "import './missing.js';", "import('./editor.js');"])(
-  'package validation rejects an unresolved import: %s',
-  async (statement) => {
-    fixture.files['dist/flame-connect-card.js'] += statement;
-    await expect(import('../../scripts/check-package.mjs')).rejects.toThrow(
-      'external or missing module dependencies',
-    );
-  },
-);
+it.each([
+  "import {html} from 'lit';",
+  "import './missing.js';",
+  "import('./editor.js');",
+  "export * from '../missing.js';",
+  "import 'https://example.com/module.js';",
+])('package validation rejects an unresolved import: %s', async (statement) => {
+  fixture.files['dist/flame-connect-card.js'] += statement;
+  await expect(import('../../scripts/check-package.mjs')).rejects.toThrow(
+    'external or missing module dependencies',
+  );
+});
 it('package validation rejects an oversized artifact before it can be released', async () => {
   fixture.bundleSize = 2_500_000;
   await expect(import('../../scripts/check-package.mjs')).rejects.toThrow('below 2.5 MB');
