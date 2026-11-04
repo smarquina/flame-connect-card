@@ -57,8 +57,17 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo 'The release already exists; no existing release will be overwritten.'
-            exit 1
+            draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)
+            test "$draft" = false || { echo 'An incomplete draft exists; recover it before retrying.'; exit 1; }
+            verification_dir=$(mktemp -d)
+            trap 'rm -rf "$verification_dir"' EXIT
+            gh release download "$RELEASE_TAG" --pattern flame-connect-card.js --dir "$verification_dir"
+            cmp --silent flame-connect-card.js "$verification_dir/flame-connect-card.js" || {
+              echo 'The published module differs from the validated artifact; nothing was overwritten.'
+              exit 1
+            }
+            echo 'The release already contains the exact validated module; no publication is needed.'
+            exit 0
           fi
           if [[ "$RELEASE_TAG" == *-* ]]; then
             gh release create "$RELEASE_TAG" flame-connect-card.js --verify-tag --generate-notes --prerelease --latest=false
