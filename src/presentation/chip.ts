@@ -62,12 +62,14 @@ export const chipStyles = css`
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--secondary-background-color, #f2f2f2);
+    background: var(
+      --fireplace-icon-background,
+      var(--chip-background, color-mix(in srgb, var(--primary-text-color, #202020) 6%, transparent))
+    );
     color: var(--secondary-text-color, #777);
   }
   .chip-icon[data-active='true'] {
     color: var(--state-climate-heat-color, #e87500);
-    background: var(--secondary-background-color, #f2f2f2);
   }
   .chip-text {
     display: grid;
@@ -118,8 +120,11 @@ export const chipStyles = css`
     height: 36px;
     border-radius: 12px;
   }
-  .chip .toggles button[aria-pressed='true'] {
-    color: var(--state-climate-heat-color, #e87500);
+  :where(.chip .toggles) button:where([aria-pressed='true']) {
+    color: var(
+      --fireplace-action-active-color,
+      var(--fireplace-action-color, var(--primary-color, var(--state-climate-heat-color, #e87500)))
+    );
   }
   .chip-warning {
     color: var(--error-color, #a72020);

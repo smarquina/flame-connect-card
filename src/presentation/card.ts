@@ -191,6 +191,7 @@ export class FlameConnectCard extends LitElement {
     const text = this.t(effect.label) + ' · ' + this.t(effect.status);
     const standby = kind === 'flame' && state.power === false && !value;
     return html`<button
+      data-action=${kind}
       aria-label=${text}
       title=${text}
       aria-pressed=${String(value === true)}
@@ -259,6 +260,7 @@ export class FlameConnectCard extends LitElement {
   private powerControl(state: FireplaceState, config: CardConfig) {
     if (!config.show_power || !config.entities.power) return nothing;
     return html`<button
+      data-action="power"
       aria-label=${this.t(state.power ? 'power_off' : 'power_on')}
       aria-pressed=${String(state.power === true)}
       title=${this.t(state.power ? 'power_off' : 'power_on')}

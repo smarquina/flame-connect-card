@@ -26,7 +26,7 @@ export const sharedStyles = css`
     cursor: pointer;
     padding: 8px 14px;
   }
-  button[aria-pressed='true'] {
+  :where(button[aria-pressed='true']) {
     border-color: var(--primary-color, #007a91);
     background: var(--primary-color, #007a91);
     color: var(--text-primary-color, #fff);

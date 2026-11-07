@@ -712,3 +712,131 @@ test('visual editor preserves card-mod CSS and nested options for the HA wrapper
     .toEqual(cardMod);
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
 });
+
+test('Mushroom chip background variables style each action in the chip and modal', async ({
+  page,
+}) => {
+  await page.evaluate(async (type) => {
+    const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+    card.setConfig({
+      type,
+      initial_view: 'compact',
+      compact_style: 'chip',
+      entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+      card_mod: {
+        style:
+          'ha-card { --chip-background: rgb(12, 60, 90); --fireplace-action-color: rgb(250, 240, 230); } .toggles [data-action="flame"] { --fireplace-action-active-background: rgb(140, 30, 40); }',
+      },
+    });
+    card.hass = window.demo.hass;
+    await card.updateComplete;
+    const style = document.createElement('style');
+    style.textContent =
+      'ha-card { --chip-background: rgb(12, 60, 90); --fireplace-action-color: rgb(250, 240, 230); } .toggles [data-action="flame"] { --fireplace-action-active-background: rgb(140, 30, 40); }';
+    card.shadowRoot!.append(style);
+  }, CARD_TYPE);
+  const card = page.locator('flame-connect-card');
+  const flame = card.locator('[data-view="chip"] [data-action="flame"]');
+  const heat = card.locator('[data-view="chip"] [data-action="heating"]');
+  await expect(flame).toHaveCSS('background-color', 'rgb(140, 30, 40)');
+  await expect(heat).toHaveCSS('background-color', 'rgb(12, 60, 90)');
+  await expect(heat).toHaveCSS('color', 'rgb(250, 240, 230)');
+  await flame.click();
+  await expect(flame).toHaveCSS('background-color', 'rgb(12, 60, 90)');
+  await card.getByRole('button', { name: /Expand controls:/ }).click();
+  const dialog = card.getByRole('dialog');
+  await expect(dialog.locator('[data-action="flame"]')).toHaveCSS(
+    'background-color',
+    'rgb(12, 60, 90)',
+  );
+  await expect(dialog.locator('[data-action="heating"]')).toHaveCSS(
+    'background-color',
+    'rgb(12, 60, 90)',
+  );
+  await expect(dialog.locator('[data-action="heating"]')).toHaveCSS('color', 'rgb(250, 240, 230)');
+  await dialog.getByRole('button', { name: 'Close controls' }).click();
+  await page.evaluate(() => {
+    window.demo.hass.states['climate.fire_heating']!.state = 'unavailable';
+    window.demo.update();
+  });
+  await expect(heat).toBeDisabled();
+  await expect(heat).toHaveCSS('background-color', 'rgb(12, 60, 90)');
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
+});
+
+test('direct card-mod selectors override action styles without affecting other controls', async ({
+  page,
+}) => {
+  await page.evaluate(async (type) => {
+    const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+    card.setConfig({
+      type,
+      initial_view: 'compact',
+      compact_style: 'chip',
+      entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+    });
+    card.hass = window.demo.hass;
+    await card.updateComplete;
+    const style = document.createElement('style');
+    style.textContent =
+      '.toggles [data-action="flame"] { background: rgb(34, 92, 170); color: rgb(255, 255, 0); }';
+    card.shadowRoot!.append(style);
+  }, CARD_TYPE);
+  const card = page.locator('flame-connect-card');
+  const flame = card.locator('[data-view="chip"] [data-action="flame"]');
+  const heat = card.locator('[data-view="chip"] [data-action="heating"]');
+  await expect(flame).toHaveCSS('background-color', 'rgb(34, 92, 170)');
+  await expect(flame).toHaveCSS('color', 'rgb(255, 255, 0)');
+  await expect(heat).not.toHaveCSS('background-color', 'rgb(34, 92, 170)');
+  await flame.click();
+  await expect(flame).toHaveCSS('background-color', 'rgb(34, 92, 170)');
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
+});
+
+test('user dark glass card-mod style adapts action and icon backgrounds automatically', async ({
+  page,
+}, info) => {
+  const userStyle = `ha-card { --primary-text-color: #f8f7f3; --secondary-text-color: #c8cecb; --primary-color: #50dbc9; --accent-color: #50dbc9; color: #f8f7f3; background: rgba(30, 38, 39, 0.38) !important; border: 1px solid rgba(255,255,255,0.17) !important; border-radius: 18px !important; box-shadow: 0 8px 24px rgba(0,0,0,0.18); backdrop-filter: blur(12px) saturate(120%); -webkit-backdrop-filter: blur(12px) saturate(120%); } :host { --primary-text-color: #fff; --secondary-text-color: #cbd1ce; --card-primary-color: #fff; --card-secondary-color: #cbd1ce; --mush-rgb-state-cover: 67, 225, 204; --mush-rgb-state-light: 67, 225, 204; }`;
+  const expected = await page.evaluate(
+    async ({ type, css }) => {
+      const card = document.querySelector('flame-connect-card') as FlameConnectCard;
+      card.setConfig({
+        type,
+        initial_view: 'compact',
+        compact_style: 'chip',
+        entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+        card_mod: { style: css },
+      });
+      card.hass = window.demo.hass;
+      card.style.setProperty('--secondary-background-color', '#fff');
+      await card.updateComplete;
+      const style = document.createElement('style');
+      style.textContent = css;
+      card.shadowRoot!.append(style);
+      const reference = document.createElement('div');
+      reference.style.background = 'color-mix(in srgb, #f8f7f3 6%, transparent)';
+      document.body.append(reference);
+      const expected = getComputedStyle(reference).backgroundColor;
+      reference.remove();
+      return expected;
+    },
+    { type: CARD_TYPE, css: userStyle },
+  );
+  const card = page.locator('flame-connect-card');
+  const flame = card.locator('[data-view="chip"] [data-action="flame"]');
+  const heat = card.locator('[data-view="chip"] [data-action="heating"]');
+  await expect(flame).toHaveCSS('background-color', expected);
+  await expect(heat).toHaveCSS('background-color', expected);
+  await expect(card.locator('.chip-icon')).toHaveCSS('background-color', expected);
+  await expect(flame).toHaveCSS('color', 'rgb(80, 219, 201)');
+  await expect(heat).toHaveCSS('color', 'rgb(80, 219, 201)');
+  await card.screenshot({ path: `test-results/card-mod-glass-${info.project.name}.png` });
+  await flame.click();
+  await expect(flame).toHaveCSS('color', 'rgb(248, 247, 243)');
+  await expect(flame).toHaveCSS('background-color', expected);
+  await card.getByRole('button', { name: /Expand controls:/ }).click();
+  await expect(card.getByRole('dialog').locator('[data-action="heating"]')).toHaveCSS(
+    'background-color',
+    expected,
+  );
+});
