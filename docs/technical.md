@@ -61,3 +61,5 @@ Removing the editor clears its discovery deadline and invalidates pending result
 Discovery prefers the climate label over the flame label and sorts devices by name and ID, independently of registry order. Configuration errors expose a stable code and field; the editor displays its localized error heading and the affected field without raw parser details. Architecture checks resolve local symbols to distinguish browser globals from local declarations and data properties.
 
 The optional chip presentation reuses the same controller, effect-state rules and action handlers. Its summary expansion button and effect buttons are sibling controls, avoiding nested interactive elements. Chip sizing estimates two masonry rows; detail controls and whole-device power remain in expanded view.
+
+The optional `card_mod` configuration is retained as supplied through normalization and visual-editor updates. Styling and template evaluation are delegated to card-mod, which can target the card shadow root and its `ha-card` elements. The card does not interpret or inject the supplied CSS.

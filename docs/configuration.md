@@ -153,3 +153,24 @@ Paths must be absolute and same-origin. Remote URLs, protocol-relative URLs, dat
 Card and editor text follow the Home Assistant user's language. Spanish language variants use Spanish; other languages fall back to English. Custom titles and entity names are preserved. The card does not change your HA language or unit settings.
 
 Chip typography follows Mushroom dimensions: a 36 px icon container and action buttons, 14 px primary text and 12 px secondary text. Theme colors and font family are inherited from Home Assistant.
+
+## Styling with card-mod
+
+Install [card-mod](https://github.com/thomasloven/lovelace-card-mod) and configure it on this card. Styles are interpreted by card-mod; Flame Connect Card preserves `card_mod` unchanged when the visual editor saves other options. card-mod supports CSS strings, nested selector maps, classes, debugging and Home Assistant templates according to its documentation.
+
+```yaml
+type: custom:flame-connect-card
+entities:
+  flame: light.living_room_flame
+  climate: climate.living_room_heating
+initial_view: compact
+compact_style: chip
+card_mod:
+  style: |
+    ha-card {
+      --ha-card-background: #202a28;
+      border-radius: 16px;
+    }
+```
+
+With card-mod 4, `ha-card` targets both the summary and expanded dialog; use `ha-card[data-view="chip"]` for the summary or `dialog ha-card` for the dialog only. `:host` targets the card element. These selectors are evaluated in the card's shadow root by card-mod. If card-mod is not installed, the setting is retained but has no visual effect. See the [card-mod application reference](https://github.com/thomasloven/lovelace-card-mod/blob/master/README-application.md) for version-specific selectors and shadow-root navigation.

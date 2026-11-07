@@ -667,3 +667,48 @@ test('modal shares pending commands and external readback with chip actions', as
   await expect(card.getByRole('button', { name: 'Flame · Off', exact: true })).toBeEnabled();
   expect(await page.evaluate(() => window.demo.calls)).toHaveLength(1);
 });
+
+test('visual editor preserves card-mod CSS and nested options for the HA wrapper', async ({
+  page,
+}) => {
+  const cardMod = {
+    style: {
+      '.': 'ha-card { --ha-card-background: #194438; }',
+      'ha-icon $': { svg: 'path { stroke-width: 2; }' },
+    },
+    class: ['fireplace', 'living-room'],
+    debug: true,
+    prepend: false,
+  };
+  await page.evaluate((card_mod) => {
+    const card = document.querySelector('flame-connect-card') as unknown as {
+      config: Record<string, unknown>;
+      setConfig(config: unknown): void;
+    };
+    const initial = { ...card.config, card_mod };
+    card.setConfig(initial);
+    const editor = document.createElement('flame-connect-card-editor') as HTMLElement & {
+      hass: typeof window.demo.hass;
+      setConfig(config: unknown): void;
+    };
+    editor.setConfig(initial);
+    editor.hass = window.demo.hass;
+    document.body.append(editor);
+    editor.addEventListener('config-changed', (event) =>
+      card.setConfig((event as CustomEvent).detail.config),
+    );
+  }, cardMod);
+  const editor = page.locator('flame-connect-card-editor');
+  await editor.getByRole('combobox', { name: 'Compact style' }).selectOption('chip');
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const card = document.querySelector('flame-connect-card') as unknown as {
+          config: Record<string, unknown>;
+        };
+        return card.config.card_mod;
+      }),
+    )
+    .toEqual(cardMod);
+  expect(await page.evaluate(() => window.demo.calls)).toHaveLength(0);
+});
