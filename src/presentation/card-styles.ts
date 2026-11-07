@@ -70,7 +70,7 @@ export const cardStyles = css`
     flex-wrap: wrap;
     justify-content: center;
   }
-  .toggles button {
+  :where(.toggles) button {
     width: 56px;
     height: 56px;
     display: grid;
@@ -78,10 +78,19 @@ export const cardStyles = css`
     padding: 0;
     border: none;
     border-radius: 16px;
-    background: var(--secondary-background-color, #f2f2f2);
+    --_fireplace-action-background: var(
+      --fireplace-action-background,
+      var(--chip-background, color-mix(in srgb, var(--primary-text-color, #202020) 6%, transparent))
+    );
+    background: var(--_fireplace-action-background);
+    color: var(--fireplace-action-color, inherit);
   }
-  .toggles button[aria-pressed='true'] {
-    color: var(--primary-color, #007a91);
+  :where(.toggles) button:where([aria-pressed='true']) {
+    background: var(--fireplace-action-active-background, var(--_fireplace-action-background));
+    color: var(
+      --fireplace-action-active-color,
+      var(--fireplace-action-color, var(--primary-color, #007a91))
+    );
     box-shadow: inset 0 0 0 2px currentColor;
   }
   svg {

@@ -63,3 +63,5 @@ Discovery prefers the climate label over the flame label and sorts devices by na
 The optional chip presentation reuses the same controller, effect-state rules and action handlers. Its summary expansion button and effect buttons are sibling controls, avoiding nested interactive elements. Chip sizing estimates two masonry rows; detail controls and whole-device power remain in expanded view.
 
 The optional `card_mod` configuration is retained as supplied through normalization and visual-editor updates. Styling and template evaluation are delegated to card-mod, which can target the card shadow root and its `ha-card` elements. The card does not interpret or inject the supplied CSS.
+
+Action button backgrounds derive a translucent neutral surface from the card's `--primary-text-color` by default. Card-mod can set `--chip-background` or `--fireplace-action-background` and state-specific action variables on `ha-card` or on a button selected by `data-action`. Button rules use low-specificity selectors so normal card-mod selectors can override them. The main fireplace icon has a separate background variable and active color.

@@ -1235,7 +1235,7 @@ var Ct = o`
     flex-wrap: wrap;
     justify-content: center;
   }
-  .toggles button {
+  :where(.toggles) button {
     width: 56px;
     height: 56px;
     display: grid;
@@ -1243,10 +1243,19 @@ var Ct = o`
     padding: 0;
     border: none;
     border-radius: 16px;
-    background: var(--secondary-background-color, #f2f2f2);
+    --_fireplace-action-background: var(
+      --fireplace-action-background,
+      var(--chip-background, color-mix(in srgb, var(--primary-text-color, #202020) 6%, transparent))
+    );
+    background: var(--_fireplace-action-background);
+    color: var(--fireplace-action-color, inherit);
   }
-  .toggles button[aria-pressed='true'] {
-    color: var(--primary-color, #007a91);
+  :where(.toggles) button:where([aria-pressed='true']) {
+    background: var(--fireplace-action-active-background, var(--_fireplace-action-background));
+    color: var(
+      --fireplace-action-active-color,
+      var(--fireplace-action-color, var(--primary-color, #007a91))
+    );
     box-shadow: inset 0 0 0 2px currentColor;
   }
   svg {
@@ -1411,7 +1420,7 @@ var Ct = o`
     cursor: pointer;
     padding: 8px 14px;
   }
-  button[aria-pressed='true'] {
+  :where(button[aria-pressed='true']) {
     border-color: var(--primary-color, #007a91);
     background: var(--primary-color, #007a91);
     color: var(--text-primary-color, #fff);
@@ -1565,12 +1574,14 @@ var At = o`
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--secondary-background-color, #f2f2f2);
+    background: var(
+      --fireplace-icon-background,
+      var(--chip-background, color-mix(in srgb, var(--primary-text-color, #202020) 6%, transparent))
+    );
     color: var(--secondary-text-color, #777);
   }
   .chip-icon[data-active='true'] {
     color: var(--state-climate-heat-color, #e87500);
-    background: var(--secondary-background-color, #f2f2f2);
   }
   .chip-text {
     display: grid;
@@ -1621,8 +1632,11 @@ var At = o`
     height: 36px;
     border-radius: 12px;
   }
-  .chip .toggles button[aria-pressed='true'] {
-    color: var(--state-climate-heat-color, #e87500);
+  :where(.chip .toggles) button:where([aria-pressed='true']) {
+    color: var(
+      --fireplace-action-active-color,
+      var(--fireplace-action-color, var(--primary-color, var(--state-climate-heat-color, #e87500)))
+    );
   }
   .chip-warning {
     color: var(--error-color, #a72020);
@@ -2141,6 +2155,7 @@ var Pt = {
 	toggle(e, t, n = !1) {
 		let r = Ot(e, t), { value: i } = r, a = i === null ? "mdi:alert-circle-outline" : Pt[r.label], o = n ? A`<ha-icon icon=${a}></ha-icon>` : Q(r.icon), s = i === null, c = this.t(r.label) + " · " + this.t(r.status), l = t === "flame" && e.power === !1 && !i;
 		return A`<button
+      data-action=${t}
       aria-label=${c}
       title=${c}
       aria-pressed=${String(i === !0)}
@@ -2193,6 +2208,7 @@ var Pt = {
 	}
 	powerControl(e, t) {
 		return !t.show_power || !t.entities.power ? M : A`<button
+      data-action="power"
       aria-label=${this.t(e.power ? "power_off" : "power_on")}
       aria-pressed=${String(e.power === !0)}
       title=${this.t(e.power ? "power_off" : "power_on")}

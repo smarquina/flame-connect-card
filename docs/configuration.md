@@ -174,3 +174,25 @@ card_mod:
 ```
 
 With card-mod 4, `ha-card` targets both the summary and expanded dialog; use `ha-card[data-view="chip"]` for the summary or `dialog ha-card` for the dialog only. `:host` targets the card element. These selectors are evaluated in the card's shadow root by card-mod. If card-mod is not installed, the setting is retained but has no visual effect. See the [card-mod application reference](https://github.com/thomasloven/lovelace-card-mod/blob/master/README-application.md) for version-specific selectors and shadow-root navigation.
+
+### Styling action buttons
+
+Flame, heating and whole-device power buttons use a subtle translucent background derived from `--primary-text-color`, so light text on a dark translucent card does not leave a white button background. Active buttons use `--primary-color`; the main fireplace icon keeps its separate activity color. Your existing card-mod styles can set these Home Assistant theme variables on `ha-card` without additional configuration.
+
+For explicit customization, set `--chip-background` (also used by Mushroom) or `--fireplace-action-background` on the card. The card-specific variable takes precedence. Set `--fireplace-action-active-background`, `--fireplace-action-color` or `--fireplace-action-active-color` for individual states. `--fireplace-icon-background` controls the main chip icon separately. These variables work in both chip and expanded layouts.
+
+Each button also has a stable `data-action` selector (`flame`, `heating` or `power`), allowing separate styling without relying on its translated label:
+
+```yaml
+card_mod:
+  style: |
+    ha-card {
+      --chip-background: rgba(255, 255, 255, 0.06);
+      --fireplace-action-active-color: #50dbc9;
+    }
+    .toggles [data-action="flame"] {
+      --fireplace-action-active-background: rgba(80, 219, 201, 0.18);
+    }
+```
+
+Custom properties on an individual button override values inherited from `ha-card`. Standard card-mod CSS selectors can also target `.toggles [data-action="heating"]` or `.toggles [data-action="power"]` directly.
