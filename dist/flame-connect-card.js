@@ -1273,6 +1273,22 @@ var Ct = o`
     align-items: center;
     gap: 8px;
   }
+  :where(.control-label) select,
+  button:where(.view-toggle) {
+    background: var(
+      --fireplace-control-background,
+      color-mix(in srgb, var(--primary-text-color, #202020) 6%, transparent)
+    );
+    color: var(--fireplace-control-color, inherit);
+    border-color: var(
+      --fireplace-control-border-color,
+      color-mix(in srgb, var(--primary-text-color, #202020) 20%, transparent)
+    );
+  }
+  :where(.control-label) option {
+    background-color: var(--fireplace-option-background, Canvas);
+    color: var(--fireplace-option-color, CanvasText);
+  }
   .feedback {
     display: flex;
     justify-content: center;
@@ -1328,7 +1344,10 @@ var Ct = o`
     box-sizing: content-box;
     padding: 10px;
     border-radius: 50%;
-    background: var(--secondary-background-color, #f2f2f2);
+    background: var(
+      --fireplace-control-background,
+      color-mix(in srgb, var(--primary-text-color, #202020) 6%, transparent)
+    );
   }
   .slider-value {
     font-size: 1.1rem;

@@ -196,3 +196,9 @@ card_mod:
 ```
 
 Custom properties on an individual button override values inherited from `ha-card`. Standard card-mod CSS selectors can also target `.toggles [data-action="heating"]` or `.toggles [data-action="power"]` directly.
+
+### Styling dialog controls
+
+The close button, dropdowns and slider icons use a translucent background derived from `--primary-text-color`, including when a card-mod style gives the card a dark background and light text. Set `--fireplace-control-background`, `--fireplace-control-color` and `--fireplace-control-border-color` on `ha-card` to customize these controls.
+
+Native dropdown menus use the browser's system colors for readable options. To customize their colors, set both `--fireplace-option-background` and `--fireplace-option-color` to a contrasting pair; the browser or operating system may control the final appearance of the menu.

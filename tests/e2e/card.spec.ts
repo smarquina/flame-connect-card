@@ -804,7 +804,13 @@ test('user dark glass card-mod style adapts action and icon backgrounds automati
         type,
         initial_view: 'compact',
         compact_style: 'chip',
-        entities: { flame: 'light.fire_flame', climate: 'climate.fire_heating' },
+        entities: {
+          flame: 'light.fire_flame',
+          climate: 'climate.fire_heating',
+          color: 'select.fire_color',
+          brightness: 'select.fire_brightness',
+          speed: 'number.fire_speed',
+        },
         card_mod: { style: css },
       });
       card.hass = window.demo.hass;
@@ -839,4 +845,27 @@ test('user dark glass card-mod style adapts action and icon backgrounds automati
     'background-color',
     expected,
   );
+  const dialog = card.getByRole('dialog');
+  const close = dialog.locator('.view-toggle');
+  await expect(close).toHaveCSS('background-color', expected);
+  await expect(close).toHaveCSS('color', 'rgb(248, 247, 243)');
+  for (const name of ['Heating / fan mode', 'Flame color', 'Flame brightness']) {
+    const control = dialog.getByRole('combobox', { name, exact: true });
+    await expect(control).toHaveCSS('background-color', expected);
+    await expect(control).toHaveCSS('color', 'rgb(248, 247, 243)');
+    const optionColors = await control
+      .locator('option')
+      .first()
+      .evaluate((option) => {
+        const styles = getComputedStyle(option);
+        return { color: styles.color, background: styles.backgroundColor };
+      });
+    expect(optionColors.color).not.toBe(optionColors.background);
+  }
+  await expect(dialog.locator('.slider-label > svg').first()).toHaveCSS(
+    'background-color',
+    expected,
+  );
+  await dialog.getByRole('combobox', { name: 'Flame color' }).selectOption('blue');
+  await expect(dialog.getByRole('combobox', { name: 'Flame color' })).toHaveValue('blue');
 });
