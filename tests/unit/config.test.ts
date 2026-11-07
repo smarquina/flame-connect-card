@@ -194,3 +194,22 @@ it('defaults chip expansion to modal and validates inline opt-in', () => {
   for (const chip_expansion of [null, 'invalid', 3, {}])
     expect(() => parseConfig({ ...base, chip_expansion })).toThrow('chip_expansion');
 });
+
+it('preserves card-mod configuration without altering styles, templates or options', () => {
+  for (const card_mod of [
+    { style: 'ha-card { --ha-card-background: teal; }' },
+    {
+      style: { '.': 'ha-card { color: red; }', 'some-element $': { '.': 'span { color: blue; }' } },
+      class: ['one', 'two'],
+      debug: true,
+      prepend: false,
+    },
+    { style: 'ha-card { color: {{ config.color }}; }' },
+    null,
+  ]) {
+    const parsed = parseConfig({ ...config, card_mod });
+    expect(parsed.card_mod).toEqual(card_mod);
+    expect(parseConfig(parsed).card_mod).toEqual(card_mod);
+  }
+  expect(Object.hasOwn(parseConfig(config), 'card_mod')).toBe(false);
+});

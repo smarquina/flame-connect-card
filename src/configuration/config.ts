@@ -129,6 +129,10 @@ function parseChipExpansion(value: unknown): CardConfig['chip_expansion'] {
   return value === 'inline' ? 'inline' : 'modal';
 }
 
+function cardModConfig(value: Record<string, unknown>): Pick<CardConfig, 'card_mod'> {
+  return Object.hasOwn(value, 'card_mod') ? { card_mod: value.card_mod } : {};
+}
+
 export function parseConfig(value: unknown): CardConfig {
   if (!RECORD(value) || value.type !== CARD_TYPE)
     throw new ConfigurationError(`type: expected ${CARD_TYPE}`);
@@ -152,6 +156,7 @@ export function parseConfig(value: unknown): CardConfig {
   }
   return {
     type: CARD_TYPE,
+    ...cardModConfig(value),
     version: SCHEMA_VERSION,
     entities,
     initial_view: value.initial_view === 'compact' ? 'compact' : 'expanded',

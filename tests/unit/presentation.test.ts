@@ -1018,3 +1018,22 @@ it('chip uses native Home Assistant icons including fan-only ventilation', async
   expect(element.shadowRoot!.querySelector('ha-icon[icon="mdi:fireplace"]')).not.toBeNull();
   expect(element.shadowRoot!.querySelector('ha-icon[icon="mdi:fan"]')).not.toBeNull();
 });
+
+it('preserves card-mod options across visual editor changes and exposes them to the HA wrapper', async () => {
+  const card_mod = {
+    style: { '.': 'ha-card { color: red; }', 'ha-icon $': 'svg { color: blue; }' },
+    class: ['fireplace'],
+    debug: true,
+  };
+  const element = await editor(fakeHass(), { ...config, card_mod });
+  const changes = vi.fn();
+  element.addEventListener('config-changed', changes);
+  change(select(element, 'Compact style'), 'chip');
+  await element.updateComplete;
+  const saved = (changes.mock.lastCall![0] as CustomEvent).detail.config;
+  expect(saved.card_mod).toEqual(card_mod);
+  const target = await card(fakeHass(), saved);
+  expect((target as unknown as { config: { card_mod: unknown } }).config.card_mod).toEqual(
+    card_mod,
+  );
+});

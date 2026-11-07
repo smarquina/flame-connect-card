@@ -690,6 +690,9 @@ function Ke(e) {
 	return e === "inline" ? "inline" : "modal";
 }
 function qe(e) {
+	return Object.hasOwn(e, "card_mod") ? { card_mod: e.card_mod } : {};
+}
+function Je(e) {
 	if (!Re(e) || e.type !== "custom:flame-connect-card") throw new K(`type: expected ${B}`);
 	if (e.version !== void 0 && e.version !== 1) throw new K("version: unsupported configuration version");
 	if (e.initial_view !== void 0 && (typeof e.initial_view != "string" || !["compact", "expanded"].includes(e.initial_view))) throw new K("initial_view: expected compact or expanded");
@@ -699,6 +702,7 @@ function qe(e) {
 	for (let t of Le) if (e[t] !== void 0 && typeof e[t] != "boolean") throw new K(`${t}: expected a boolean`);
 	return {
 		type: B,
+		...qe(e),
 		version: 1,
 		entities: n,
 		initial_view: e.initial_view === "compact" ? "compact" : "expanded",
@@ -730,44 +734,44 @@ function q(e, t, n, r) {
 function J(e, t) {
 	return e.power !== !1 && e[t];
 }
-function Je(e) {
+function Ye(e) {
 	return e.power === !1 ? "off" : e.flame === null || e.heating === null ? "unknown" : e.heating && e.mode !== "fan_only" ? e.flame ? "both" : "heat" : e.flame ? "flame" : "off";
 }
-function Ye(e) {
+function Xe(e) {
 	return e.modes.filter((e) => Ie.some((t) => t === e));
 }
-function Xe(e, t) {
+function Ze(e, t) {
 	if (!e.climateAvailable || !e.target) throw new U("unavailable");
 	let { minimum: n, maximum: r, step: i } = e.target;
 	if (!q(t, n, r, i)) throw new U("invalid_value");
 }
-function Ze(e, t) {
+function Qe(e, t) {
 	if (!e.speed) throw new U("unavailable");
 	let { minimum: n, maximum: r, step: i } = e.speed;
 	if (!q(t, n, r, i)) throw new U("invalid_value");
 }
-function Qe(e, t, n) {
+function $e(e, t, n) {
 	if (e[t] === null) throw new U("unavailable");
 	if (t === "flame" && n && e.power === !1) throw new U("standby");
 }
-function $e(e, t) {
+function et(e, t) {
 	switch (t.kind) {
 		case "power":
 		case "flame":
-			Qe(e, t.kind, t.value);
+			$e(e, t.kind, t.value);
 			break;
 		case "heating":
 			if (!e.climateAvailable || e.heating === null) throw new U("unavailable");
 			break;
 		case "speed":
-			Ze(e, t.value);
+			Qe(e, t.value);
 			break;
 		case "temperature":
-			Xe(e, t.value);
+			Ze(e, t.value);
 			break;
 		case "mode":
 			if (!e.climateAvailable) throw new U("unavailable");
-			if (!Ye(e).includes(t.value)) throw new U("invalid_value");
+			if (!Xe(e).includes(t.value)) throw new U("invalid_value");
 			break;
 		case "color":
 		case "brightness":
@@ -775,7 +779,7 @@ function $e(e, t) {
 			if (!e[t.kind].options.includes(t.value)) throw new U("invalid_value");
 	}
 }
-function et(e, t) {
+function tt(e, t) {
 	switch (t.kind) {
 		case "speed": return e.speed !== null && e.speed.value === t.value;
 		case "temperature": return e.target !== null && Math.abs(e.target.value - t.value) < Math.min(.01, e.target.step / 2);
@@ -787,12 +791,12 @@ function et(e, t) {
 		default: return e[t.kind] === t.value;
 	}
 }
-function tt(e, t, n) {
+function nt(e, t, n) {
 	return t === n ? e : n === "°C" ? (e - 32) * 5 / 9 : e * 9 / 5 + 32;
 }
 // src/adapters/home-assistant/state-mapper.ts
-var nt = /* @__PURE__ */ new Set(["unavailable", "unknown"]), Y = (e) => e !== void 0 && !nt.has(e.state), X = (e) => typeof e == "number" && Number.isFinite(e) ? e : null, rt = (e) => e === "°C" || e === "°F" ? e : null, Z = (e) => Array.isArray(e) ? e.filter((e) => typeof e == "string") : [], it = (e) => Y(e) && ["on", "off"].includes(e.state) ? e.state === "on" : null;
-function at(e) {
+var rt = /* @__PURE__ */ new Set(["unavailable", "unknown"]), Y = (e) => e !== void 0 && !rt.has(e.state), X = (e) => typeof e == "number" && Number.isFinite(e) ? e : null, it = (e) => e === "°C" || e === "°F" ? e : null, Z = (e) => Array.isArray(e) ? e.filter((e) => typeof e == "string") : [], at = (e) => Y(e) && ["on", "off"].includes(e.state) ? e.state === "on" : null;
+function ot(e) {
 	let t = Z(e?.attributes.options);
 	return {
 		available: Y(e) && t.includes(e.state),
@@ -800,19 +804,19 @@ function at(e) {
 		options: t
 	};
 }
-function ot(e, t) {
-	let n = rt(e?.attributes.unit_of_measurement);
+function st(e, t) {
+	let n = it(e?.attributes.unit_of_measurement);
 	if (!Y(e) || e.attributes.device_class !== "temperature" || e.state.trim() === "") return null;
 	let r = Number(e.state), i = t ?? n;
 	return !Number.isFinite(r) || !n || !i ? null : {
-		value: tt(r, n, i),
+		value: nt(r, n, i),
 		unit: i
 	};
 }
-function st(e, t, n) {
+function ct(e, t, n) {
 	return t ? !n || !e || !["off", "heat"].includes(e.state) ? null : e.state === "heat" : !1;
 }
-function ct(e) {
+function lt(e) {
 	let t = X(e.min_temp), n = X(e.max_temp), r = t !== null && n !== null && t <= n, i = X(e.target_temp_step);
 	return {
 		minimum: r ? t : null,
@@ -820,7 +824,7 @@ function ct(e) {
 		step: i !== null && i > 0 ? i : null
 	};
 }
-function lt(e) {
+function ut(e) {
 	if (!Y(e) || e.state.trim() === "") return null;
 	let t = Number(e.state), n = X(e.attributes.min), r = X(e.attributes.max), i = X(e.attributes.step);
 	return n === null || r === null || i === null || !q(t, n, r, i) ? null : {
@@ -830,14 +834,14 @@ function lt(e) {
 		step: i
 	};
 }
-function ut(e, t) {
-	let n = (n) => t.states[e.entities[n] ?? ""], r = n("climate"), i = n("flame"), a = r?.attributes ?? {}, o = Y(r) && Z(a.hvac_modes).includes("heat") && Z(a.hvac_modes).includes("off"), s = rt(a.temperature_unit) ?? rt(t.config?.unit_system?.temperature), c = X(a.temperature), l = ct(a), u = c !== null && l.minimum !== null && l.maximum !== null && l.step !== null && q(c, l.minimum, l.maximum, l.step), d = r?.attributes.friendly_name ?? i?.attributes.friendly_name;
+function dt(e, t) {
+	let n = (n) => t.states[e.entities[n] ?? ""], r = n("climate"), i = n("flame"), a = r?.attributes ?? {}, o = Y(r) && Z(a.hvac_modes).includes("heat") && Z(a.hvac_modes).includes("off"), s = it(a.temperature_unit) ?? it(t.config?.unit_system?.temperature), c = X(a.temperature), l = lt(a), u = c !== null && l.minimum !== null && l.maximum !== null && l.step !== null && q(c, l.minimum, l.maximum, l.step), d = r?.attributes.friendly_name ?? i?.attributes.friendly_name;
 	return {
-		speed: lt(n("speed")),
+		speed: ut(n("speed")),
 		name: e.name ?? (typeof d == "string" ? d : "Fireplace"),
-		power: it(n("power")),
-		flame: e.entities.flame ? it(i) : !1,
-		heating: st(r, !!e.entities.climate, o),
+		power: at(n("power")),
+		flame: e.entities.flame ? at(i) : !1,
+		heating: ct(r, !!e.entities.climate, o),
 		climateAvailable: o,
 		mode: Y(r) && typeof a.preset_mode == "string" ? a.preset_mode : null,
 		modes: Z(a.preset_modes),
@@ -848,12 +852,12 @@ function ut(e, t) {
 			maximum: l.maximum,
 			step: l.step
 		} : null,
-		ambient: ot(n("ambient"), s),
-		color: at(n("color")),
-		brightness: at(n("brightness"))
+		ambient: st(n("ambient"), s),
+		color: ot(n("color")),
+		brightness: ot(n("brightness"))
 	};
 }
-var dt = {
+var ft = {
 	title: "Fireplace",
 	flame: "Flame",
 	heating: "Heating",
@@ -953,7 +957,7 @@ var dt = {
 	inline: "In dashboard",
 	close: "Close controls",
 	details: "Fireplace controls"
-}, ft = {
+}, pt = {
 	title: "Chimenea",
 	flame: "Llama",
 	heating: "Calefacción",
@@ -1055,21 +1059,21 @@ var dt = {
 	details: "Controles de la chimenea"
 };
 // src/localization/localize.ts
-function pt(e, t) {
-	return mt(e, t);
-}
 function mt(e, t) {
-	let n = e.toLowerCase().startsWith("es") ? ft : dt, r = (e) => Object.hasOwn(n, e) ? n[e] : void 0;
+	return ht(e, t);
+}
+function ht(e, t) {
+	let n = e.toLowerCase().startsWith("es") ? pt : ft, r = (e) => Object.hasOwn(n, e) ? n[e] : void 0;
 	return r(t) ?? t.split("_").map((e) => r(e) ?? e).join(" + ");
 }
-function ht(e, t, n = 1) {
+function gt(e, t, n = 1) {
 	try {
 		return new Intl.NumberFormat(e, { maximumFractionDigits: n }).format(t);
 	} catch {
 		return new Intl.NumberFormat("en", { maximumFractionDigits: n }).format(t);
 	}
 }
-function gt(e, t) {
+function _t(e, t) {
 	let n = (e) => {
 		let [t, n = "0"] = String(e).split("e");
 		return Math.max(0, (t.split(".")[1]?.length ?? 0) - Number(n));
@@ -1077,7 +1081,7 @@ function gt(e, t) {
 	return Math.min(20, Math.max(1, n(e), n(t)));
 }
 // src/application/controller.ts
-var _t = class {
+var vt = class {
 	constructor(e, t, n = Fe) {
 		this.gateway = e, this.changed = t, this.timeout = n;
 	}
@@ -1087,11 +1091,11 @@ var _t = class {
 	execute(e, t) {
 		if (this.pending) return Promise.reject(new U("busy"));
 		try {
-			$e(e, t);
+			et(e, t);
 		} catch (e) {
 			return Promise.reject(e);
 		}
-		return et(e, t) ? Promise.resolve() : new Promise((e, n) => {
+		return tt(e, t) ? Promise.resolve() : new Promise((e, n) => {
 			let r = {
 				command: t,
 				resolve: e,
@@ -1102,7 +1106,7 @@ var _t = class {
 		});
 	}
 	update(e) {
-		this.pending && et(e, this.pending.command) && this.finish(this.pending);
+		this.pending && tt(e, this.pending.command) && this.finish(this.pending);
 	}
 	dispose() {
 		this.pending && this.finish(this.pending, "unavailable");
@@ -1110,7 +1114,7 @@ var _t = class {
 	finish(e, t) {
 		this.pending === e && (clearTimeout(e.timer), this.pending = void 0, t ? e.reject(new U(t)) : e.resolve(), this.changed());
 	}
-}, vt = class {
+}, yt = class {
 	constructor(e, t) {
 		this.getHass = e, this.entities = t;
 	}
@@ -1144,11 +1148,11 @@ var _t = class {
 	}
 };
 // src/composition.ts
-function yt(e, t, n) {
-	return new _t(new vt(e, t), n);
+function bt(e, t, n) {
+	return new vt(new yt(e, t), n);
 }
 // src/domain/controls.ts
-var bt = {
+var xt = {
 	ambient: "ambient",
 	target: "climate",
 	mode: "climate",
@@ -1156,11 +1160,11 @@ var bt = {
 	brightness: "brightness",
 	speed: "speed"
 };
-function xt(e, t) {
-	return e[`show_${t}`] && !!e.entities[bt[t]];
+function St(e, t) {
+	return e[`show_${t}`] && !!e.entities[xt[t]];
 }
 // src/presentation/card-styles.ts
-var St = o`
+var Ct = o`
   ha-card {
     display: block;
     overflow: hidden;
@@ -1380,7 +1384,7 @@ var St = o`
       grid-template-columns: 1fr;
     }
   }
-`, Ct = o`
+`, wt = o`
   :host {
     display: block;
     color: var(--primary-text-color, #202020);
@@ -1443,7 +1447,7 @@ var St = o`
     font-size: 0.9rem;
     line-height: 1.4;
   }
-`, wt = {
+`, Tt = {
 	close: "M6 6l12 12 M18 6L6 18",
 	fireplace: "M3 5h18v15H3z M3 8h18 M8 17c-2-3 2-4 3-7 3 3 6 5 3 7 M6 17h12",
 	power_on: "M8 5l11 7-11 7z",
@@ -1463,16 +1467,16 @@ var St = o`
 };
 function Q(e) {
 	return A`<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    ${ge`<path d=${wt[e]} />`}
+    ${ge`<path d=${Tt[e]} />`}
   </svg>`;
 }
 // src/presentation/slider.ts
-function Tt(e, t, n) {
+function Et(e, t, n) {
 	let r = n > t ? (e - t) / (n - t) : 0;
 	return `${Math.max(0, Math.min(1, r)) * 100}%`;
 }
-function Et({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, language: o, label: s, disabled: c, commit: l }) {
-	let u = t !== null && n !== null && r !== null && i !== null && r > n, d = n ?? 0, f = r ?? d, p = t ?? d, m = Tt(p, d, f), h = (e) => ht(o, e, gt(d, i ?? 1)) + (a ? " " + a : ""), g = t === null ? "—" : h(t);
+function Dt({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, language: o, label: s, disabled: c, commit: l }) {
+	let u = t !== null && n !== null && r !== null && i !== null && r > n, d = n ?? 0, f = r ?? d, p = t ?? d, m = Et(p, d, f), h = (e) => gt(o, e, _t(d, i ?? 1)) + (a ? " " + a : ""), g = t === null ? "—" : h(t);
 	return A`<div class="slider-row">
     <label class="slider-label" for=${e} title=${s}>
       ${Q(e)}<span class="sr-only">${s}</span>
@@ -1491,7 +1495,7 @@ function Et({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, langu
       ?disabled=${c || !u}
       @input=${(e) => {
 		let t = e.currentTarget;
-		t.style.setProperty("--fill", Tt(t.valueAsNumber, d, f)), t.setAttribute("aria-valuetext", h(t.valueAsNumber));
+		t.style.setProperty("--fill", Et(t.valueAsNumber, d, f)), t.setAttribute("aria-valuetext", h(t.valueAsNumber));
 	}}
       @change=${(e) => {
 		let t = e.currentTarget;
@@ -1501,7 +1505,7 @@ function Et({ kind: e, confirmed: t, lower: n, upper: r, step: i, unit: a, langu
   </div>`;
 }
 // src/presentation/effect-state.ts
-function Dt(e, t) {
+function Ot(e, t) {
 	let n = J(e, t), r = t === "heating" && e.mode === "fan_only" ? "ventilation" : t, i = "not_available";
 	return n !== null && (i = n ? "on" : "off"), {
 		value: n,
@@ -1512,7 +1516,7 @@ function Dt(e, t) {
 	};
 }
 // src/presentation/chip.ts
-function Ot(e, t, n, r, i, a, o) {
+function kt(e, t, n, r, i, a, o) {
 	let s = J(e, "flame"), c = J(e, "heating");
 	return A`<div class="chip">
     <button
@@ -1532,7 +1536,7 @@ function Ot(e, t, n, r, i, a, o) {
     ${a}
   </div>`;
 }
-var kt = o`
+var At = o`
   ha-card[data-view='chip'] {
     border-radius: var(--ha-card-border-radius, 12px);
   }
@@ -1628,7 +1632,7 @@ var kt = o`
   }
 `;
 // src/adapters/home-assistant/discovery.ts
-async function At(e) {
+async function jt(e) {
 	let t = await e.callWS({ type: "config/entity_registry/list" }), n = /* @__PURE__ */ new Map();
 	for (let r of [...t].sort((e, t) => e.entity_id.localeCompare(t.entity_id, "en"))) {
 		if (r.platform !== "flame_connect" || !r.device_id || r.disabled_by) continue;
@@ -1651,7 +1655,7 @@ async function At(e) {
 	return [...n.values()].filter((e) => e.entities.flame || e.entities.climate).sort((e, t) => e.name.localeCompare(t.name, "en") || e.id.localeCompare(t.id, "en"));
 }
 // src/presentation/editor.ts
-var jt = 15e3, Mt = class extends z {
+var Mt = 15e3, Nt = class extends z {
 	constructor(...e) {
 		super(...e), this.config = {
 			type: B,
@@ -1660,7 +1664,7 @@ var jt = 15e3, Mt = class extends z {
 		}, this.fireplaces = [], this.discoveryState = "idle", this.discoveryGeneration = 0, this.error = "";
 	}
 	static {
-		this.styles = [Ct, o`
+		this.styles = [wt, o`
       .editor {
         display: grid;
         gap: 16px;
@@ -1707,8 +1711,8 @@ var jt = 15e3, Mt = class extends z {
 		let e = ++this.discoveryGeneration;
 		this.discoveryState = "loading", this.requestUpdate();
 		try {
-			let t, n = await Promise.race([At(this.currentHass), new Promise((e, n) => {
-				t = setTimeout(() => n(/* @__PURE__ */ Error("Discovery timeout")), jt), this.discoveryTimer = t;
+			let t, n = await Promise.race([jt(this.currentHass), new Promise((e, n) => {
+				t = setTimeout(() => n(/* @__PURE__ */ Error("Discovery timeout")), Mt), this.discoveryTimer = t;
 			})]).finally(() => clearTimeout(t));
 			if (e !== this.discoveryGeneration) return;
 			this.fireplaces = n, this.discoveryState = "ready";
@@ -1722,14 +1726,14 @@ var jt = 15e3, Mt = class extends z {
 		e && typeof e == "object" && !Array.isArray(e) && (this.config = structuredClone(e)), this.requestUpdate();
 	}
 	t(e) {
-		return pt(this.currentHass?.locale?.language ?? this.currentHass?.language ?? "en", e);
+		return mt(this.currentHass?.locale?.language ?? this.currentHass?.language ?? "en", e);
 	}
 	bindings() {
 		return this.config.entities ?? {};
 	}
 	emit() {
 		try {
-			let e = qe(this.config);
+			let e = Je(this.config);
 			this.error = "", this.dispatchEvent(new CustomEvent("config-changed", {
 				detail: { config: e },
 				bubbles: !0,
@@ -2007,13 +2011,13 @@ var jt = 15e3, Mt = class extends z {
     </div>`;
 	}
 };
-customElements.get("flame-connect-card-editor") || customElements.define("flame-connect-card-editor", Mt);
+customElements.get("flame-connect-card-editor") || customElements.define("flame-connect-card-editor", Nt);
 // src/presentation/card.ts
-var Nt = {
+var Pt = {
 	flame: "mdi:fire",
 	heating: "mdi:radiator",
 	ventilation: "mdi:fan"
-}, Pt = 8, Ft = 3, It = 2, Lt = 2, Rt = 2, zt = "url(" + JSON.stringify(Pe) + ")", Bt = class extends z {
+}, Ft = 8, It = 3, Lt = 2, Rt = 2, zt = 2, Bt = "url(" + JSON.stringify(Pe) + ")", Vt = class extends z {
 	constructor(...e) {
 		super(...e), this.preview = !1, this.error = "", this.generation = 0, this.expanded = !0, this.modalOpen = !1;
 	}
@@ -2022,28 +2026,28 @@ var Nt = {
 	}
 	static {
 		this.styles = [
+			wt,
 			Ct,
-			St,
-			kt
+			At
 		];
 	}
 	set hass(e) {
-		this.currentHass = e, this.mappedState = this.config ? ut(this.config, e) : void 0, this.mappedState && this.controller?.update(this.mappedState), this.requestUpdate();
+		this.currentHass = e, this.mappedState = this.config ? dt(this.config, e) : void 0, this.mappedState && this.controller?.update(this.mappedState), this.requestUpdate();
 	}
 	setConfig(e) {
-		let t = qe(e);
-		this.closeModal(), this.generation++, this.controller?.dispose(), this.config = t, this.mappedState = this.currentHass ? ut(t, this.currentHass) : void 0, this.expanded = t.initial_view === "expanded", this.error = "", this.controller = yt(() => this.currentHass, t.entities, () => this.requestUpdate()), this.requestUpdate();
+		let t = Je(e);
+		this.closeModal(), this.generation++, this.controller?.dispose(), this.config = t, this.mappedState = this.currentHass ? dt(t, this.currentHass) : void 0, this.expanded = t.initial_view === "expanded", this.error = "", this.controller = bt(() => this.currentHass, t.entities, () => this.requestUpdate()), this.requestUpdate();
 	}
 	disconnectedCallback() {
 		super.disconnectedCallback(), this.closeModal(), this.generation++, this.controller?.dispose();
 	}
 	getCardSize() {
-		if (this.modalOpen) return It;
-		if (this.expanded) return Pt;
+		if (this.modalOpen) return Lt;
+		if (this.expanded) return Ft;
 		let e = this.config;
-		if (e.compact_style === "chip") return It;
-		let t = e.compact_controls.filter((t) => xt(e, t)).length, n = e.compact_image && e.show_image ? Rt : 0;
-		return Ft + t * Lt + n;
+		if (e.compact_style === "chip") return Lt;
+		let t = e.compact_controls.filter((t) => St(e, t)).length, n = e.compact_image && e.show_image ? zt : 0;
+		return It + t * Rt + n;
 	}
 	getGridOptions() {
 		return {
@@ -2065,7 +2069,7 @@ var Nt = {
 		return this.currentHass?.locale?.language ?? this.currentHass?.language ?? "en";
 	}
 	t(e) {
-		return pt(this.language, e);
+		return mt(this.language, e);
 	}
 	get disabled() {
 		return this.preview || this.controller?.busy === !0;
@@ -2075,7 +2079,7 @@ var Nt = {
 		let t = this.generation;
 		this.error = "";
 		try {
-			await this.controller.execute(ut(this.config, this.currentHass), e);
+			await this.controller.execute(dt(this.config, this.currentHass), e);
 		} catch (e) {
 			t === this.generation && (this.error = e instanceof U ? e.code : "failed");
 		}
@@ -2092,7 +2096,7 @@ var Nt = {
 		return this.mappedState;
 	}
 	selectControl(e, t) {
-		let n = t === "mode" ? Ye(e) : e[t].options, r = t === "mode" ? e.mode : e[t].value, i = t === "mode" ? e.climateAvailable : e[t].available, a = r ? mt(this.language, r) : this.t("select");
+		let n = t === "mode" ? Xe(e) : e[t].options, r = t === "mode" ? e.mode : e[t].value, i = t === "mode" ? e.climateAvailable : e[t].available, a = r ? ht(this.language, r) : this.t("select");
 		return A`<label class="control-label" title=${this.t(t)}
       >${Q(t)}<span class="sr-only">${this.t(t)}</span
       ><select
@@ -2102,24 +2106,24 @@ var Nt = {
         @change=${(e) => this.choose(t, e, r)}
       >
         ${!r || !n.includes(r) ? A`<option value=${r ?? ""}>${a}</option>` : M}
-        ${n.map((e) => A`<option value=${e} ?selected=${r === e}>${mt(this.language, e)}</option>`)}
+        ${n.map((e) => A`<option value=${e} ?selected=${r === e}>${ht(this.language, e)}</option>`)}
       </select></label
     >`;
 	}
 	status(e) {
 		if (e.power === !1) return "standby_label";
-		let t = Je(e);
+		let t = Ye(e);
 		return t === "unknown" ? "state_unknown" : e.heating && e.mode === "fan_only" ? "fan_active" : `state_${t}`;
 	}
 	image(e, t) {
 		if (!t.show_image) return M;
-		let n = Je(e), r = n === "unknown" ? void 0 : t.images[n], i = {
+		let n = Ye(e), r = n === "unknown" ? void 0 : t.images[n], i = {
 			off: "0% 0%",
 			flame: "100% 0%",
 			heat: "0% 100%",
 			both: "100% 100%",
 			unknown: "0% 0%"
-		}, a = this.t(this.status(e)) + ". " + this.t("image_hint"), o = r ? "url(" + JSON.stringify(r) + ")" : zt, s = n === "unknown";
+		}, a = this.t(this.status(e)) + ". " + this.t("image_hint"), o = r ? "url(" + JSON.stringify(r) + ")" : Bt, s = n === "unknown";
 		return A`<div
       class="scene ${s ? "unknown" : ""}"
       role="img"
@@ -2135,7 +2139,7 @@ var Nt = {
     </div>`;
 	}
 	toggle(e, t, n = !1) {
-		let r = Dt(e, t), { value: i } = r, a = i === null ? "mdi:alert-circle-outline" : Nt[r.label], o = n ? A`<ha-icon icon=${a}></ha-icon>` : Q(r.icon), s = i === null, c = this.t(r.label) + " · " + this.t(r.status), l = t === "flame" && e.power === !1 && !i;
+		let r = Ot(e, t), { value: i } = r, a = i === null ? "mdi:alert-circle-outline" : Pt[r.label], o = n ? A`<ha-icon icon=${a}></ha-icon>` : Q(r.icon), s = i === null, c = this.t(r.label) + " · " + this.t(r.status), l = t === "flame" && e.power === !1 && !i;
 		return A`<button
       aria-label=${c}
       title=${c}
@@ -2156,7 +2160,7 @@ var Nt = {
 		return this.sliderControl("speed", e.speed?.value ?? null, e.speed?.minimum ?? null, e.speed?.maximum ?? null, e.speed?.step ?? null, "");
 	}
 	sliderControl(e, t, n, r, i, a) {
-		return Et({
+		return Dt({
 			kind: e,
 			confirmed: t,
 			lower: n,
@@ -2164,7 +2168,7 @@ var Nt = {
 			step: i,
 			unit: a,
 			language: this.language,
-			label: pt(this.language, e),
+			label: mt(this.language, e),
 			disabled: this.disabled,
 			commit: (t) => {
 				this.run({
@@ -2178,7 +2182,7 @@ var Nt = {
 		let t = "—";
 		if (e.ambient) {
 			let n = this.language;
-			t = ht(n, e.ambient.value) + " " + e.ambient.unit;
+			t = gt(n, e.ambient.value) + " " + e.ambient.unit;
 		}
 		return A`<div>
       <div class="reading-label" title=${this.t("ambient")}>
@@ -2205,7 +2209,7 @@ var Nt = {
 		return e[t] && !!e.entities[n];
 	}
 	detailControl(e, t, n) {
-		return xt(t, n) ? A`<div data-control=${n}>${{
+		return St(t, n) ? A`<div data-control=${n}>${{
 			ambient: () => this.ambientControl(e),
 			target: () => this.targetControl(e),
 			mode: () => this.selectControl(e, "mode"),
@@ -2219,7 +2223,7 @@ var Nt = {
       ${["flame", "heating"].map((n) => {
 			let r = n === "flame" ? "flame" : "climate";
 			if (!t.entities[r]) return M;
-			let i = Dt(e, n), a = this.t(i.label) + " · " + this.t(i.status);
+			let i = Ot(e, n), a = this.t(i.label) + " · " + this.t(i.status);
 			return A`<span
           role="status"
           data-status=${n}
@@ -2260,7 +2264,7 @@ var Nt = {
       ${this.isVisible(t, "show_heating", "climate") ? this.toggle(e, "heating", !0) : M}
     </div>`;
 		return A`<ha-card data-view="chip" aria-label=${n}>
-      ${Ot(e, n, this.t(this.status(e)), this.t("expand"), () => this.changeView(), r, t.chip_expansion === "modal")}
+      ${kt(e, n, this.t(this.status(e)), this.t("expand"), () => this.changeView(), r, t.chip_expansion === "modal")}
       <div class="chip-feedback">${this.feedback()}</div>
     </ha-card>`;
 	}
@@ -2312,7 +2316,7 @@ var Nt = {
 	}
 };
 // src/index.ts
-customElements.get("flame-connect-card") || customElements.define("flame-connect-card", Bt);
+customElements.get("flame-connect-card") || customElements.define("flame-connect-card", Vt);
 var $ = window;
 $.customCards ??= [], $.customCards.some((e) => e.type === "flame-connect-card") || $.customCards.push({
 	type: "flame-connect-card",

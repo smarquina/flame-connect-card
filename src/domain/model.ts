@@ -27,6 +27,7 @@ export type DetailControl = (typeof DETAIL_CONTROLS)[number];
 export type VisibilityOption = (typeof VISIBILITY_OPTIONS)[number];
 export interface CardConfig extends Record<VisibilityOption, boolean> {
   type: typeof CARD_TYPE;
+  card_mod?: unknown;
   version: number;
   name?: string;
   entities: Bindings;
